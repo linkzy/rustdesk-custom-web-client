@@ -1,10 +1,10 @@
-# Production stack — uses pre-built images from Docker Hub.
+# Production stack — uses pre-built images from GitHub Container Registry (ghcr.io).
 # Copy this file to your VPS and create a .env beside it with your real values.
 # In Portainer: Stacks → Add Stack → paste this content or point to the repo.
 
 services:
   gateway:
-    image: ${DOCKER_USERNAME}/rclient-gateway:latest
+    image: ghcr.io/linkzy/rclient-gateway:latest
     restart: unless-stopped
     environment:
       - HBBS_HOST=${HBBS_HOST}
@@ -19,7 +19,7 @@ services:
       - rclient
 
   web:
-    image: ${DOCKER_USERNAME}/rclient-web:latest
+    image: ghcr.io/linkzy/rclient-web:latest
     restart: unless-stopped
     ports:
       - "${WEB_PORT:-80}:80"
