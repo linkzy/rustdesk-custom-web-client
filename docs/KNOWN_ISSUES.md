@@ -17,12 +17,13 @@
 - Consistently occurs 5–15 seconds after a successful connection
 - No error displayed in the browser UI — session silently drops
 
-### Root Cause
-The RustDesk server (peer) sends periodic `TestDelay` keepalive messages (protobuf `Message.test_delay`, field 5) to verify the client is alive and measure round-trip latency. The server expects the client to echo the message back with `from_client = true`. 
+### Root Cause (Two-Layer Bug)
 
-Our gateway receives these `TestDelay` messages but falls into the unhandled `else` branch in `handleRelayMessage` and silently ignores them. After ~10 seconds without a `TestDelay` echo, the RustDesk server closes the relay connection.
+**Layer 1**: The handler for `test_delay` was missing — messages fell into the unhandled `else` branch and were silently ignored.
 
-**Proto definition** (`message.proto` line 701):
+**Layer 2** (the real blocker): After adding the handler, it still didn't work because protobufjs decodes `int64` fields as JavaScript strings when using `toObject({ longs: String })`. Re-encoding that string value calls `verify()` which throws `"integer|Long expected"`. The throw was caught by the outer try/catch and silently swallowed — the echo was never sent.
+
+**Proto definition** (`message.proto`):
 ```protobuf
 message TestDelay {
   int64  time         = 1;   // timestamp from server (echo back as-is)
@@ -31,6 +32,8 @@ message TestDelay {
   uint32 target_bitrate = 4;
 }
 ```
+
+**Key lesson**: Any `int64`/`uint64` field decoded with `longs: String` must be converted with `Number(value)` before re-encoding. The `number` type is accepted by `verify()` for int64 fields (JS numbers cover up to 2^53, sufficient for timestamps).
 
 ### Log Evidence
 When the session is active, gateway logs show `test_delay` in the decoded fields for received messages before the relay closes:
@@ -44,28 +47,17 @@ When the session is active, gateway logs show `test_delay` in the decoded fields
 The relay closure code `1006` (abnormal close / no close frame) indicates the **server** dropped the TCP connection — not the client or hbbr itself.
 
 ### Fix Applied
-In `session.ts → handleRelayMessage`, added handler alongside `video_frame` and `peer_info`:
+In `session.ts → handleRelayMessage`:
 ```typescript
 } else if (msg.test_delay) {
-  // Echo keepalive back to peer — silence for ~10s causes peer to close with 1006
-  this.sendMessage({ test_delay: { time: msg.test_delay.time, from_client: true } });
+  // time is decoded as string by protobufjs (longs: String) — convert to number for re-encoding
+  const echoTime = Number(msg.test_delay.time) || 0;
+  this.sendMessage({ test_delay: { time: echoTime, from_client: true } });
+  console.log('[session] Echoed TestDelay time=' + echoTime);
 }
 ```
-The `time` field is echoed back exactly as received so the server can compute RTT.
 
-### ~~Fix (Not Yet Implemented)~~
-~~In `session.ts → handleRelayMessage`, add a handler:~~
-```typescript
-} else if (msg.test_delay) {
-  this.sendMessage({
-    test_delay: {
-      time: msg.test_delay.time,
-      from_client: true,
-    },
-  });
-}
-```
-~~This is a one-liner fix — the `time` field must be echoed back exactly as received so the server can compute RTT.~~
+Confirmed working: sessions now hold indefinitely. Log shows `[session] Echoed TestDelay time=0` every few seconds.
 
 ---
 

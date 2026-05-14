@@ -1,0 +1,33 @@
+# Production stack — uses pre-built images from Docker Hub.
+# Copy this file to your VPS and create a .env beside it with your real values.
+# In Portainer: Stacks → Add Stack → paste this content or point to the repo.
+
+services:
+  gateway:
+    image: ${DOCKER_USERNAME}/rclient-gateway:latest
+    restart: unless-stopped
+    environment:
+      - HBBS_HOST=${HBBS_HOST}
+      - HBBS_WS_PORT=${HBBS_WS_PORT:-21118}
+      - HBBR_HOST=${HBBR_HOST}
+      - HBBR_WS_PORT=${HBBR_WS_PORT:-21119}
+      - SERVER_KEY=${SERVER_KEY}
+      - GATEWAY_PORT=4000
+    expose:
+      - "4000"
+    networks:
+      - rclient
+
+  web:
+    image: ${DOCKER_USERNAME}/rclient-web:latest
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-80}:80"
+    depends_on:
+      - gateway
+    networks:
+      - rclient
+
+networks:
+  rclient:
+    driver: bridge

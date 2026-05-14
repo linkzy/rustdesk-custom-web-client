@@ -132,4 +132,6 @@ When completing a task, verify it by running the relevant unit test or manually 
 
 9. **protobufjs bytes fields**: `Type.decode()` returns bytes as `Uint8Array`. `Type.toObject({ ... })` returns bytes as binary strings — convert with `Buffer.from(str, 'binary')`, **not** `Buffer.from(str, 'base64')`.
 
-10. **TestDelay keepalive (IMPORTANT)**: The peer sends `Message { test_delay: { time, from_client: false } }` every few seconds. You MUST echo: `Message { test_delay: { time: same_time, from_client: true } }`. Silence → peer closes connection with code 1006 after ~10 seconds. See KI-001 in KNOWN_ISSUES.md.
+10. **protobufjs int64/uint64 re-encoding**: `toObject({ longs: String })` returns int64 fields as JavaScript strings. If you decode a message and re-encode it (e.g. to echo it back), convert the value with `Number(value)` first. Passing a string to `verify()`/`encode()` throws `"integer|Long expected"`, which gets caught by the outer try/catch and silently drops the message.
+
+11. **TestDelay keepalive (IMPORTANT)**: The peer sends `Message { test_delay: { time, from_client: false } }` every few seconds. You MUST echo: `Message { test_delay: { time: Number(msg.test_delay.time), from_client: true } }`. Silence → peer closes connection with code 1006 after ~10 seconds. See KI-001 in KNOWN_ISSUES.md.
