@@ -2,7 +2,7 @@ import WebSocket, { WebSocketServer } from 'ws';
 import path from 'path';
 import * as dotenv from 'dotenv';
 import { Session } from './session';
-import { buildKeyPayload } from './utils/keymap';
+import { buildKeyPayload, MODIFIER_MAP } from './utils/keymap';
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
@@ -38,12 +38,15 @@ wss.on('connection', (ws: WebSocket) => {
           session = null;
         }
       } else if (msg.type === 'mouse') {
+        const modifiers = ((msg.modifiers ?? []) as string[])
+          .map((m) => MODIFIER_MAP[m])
+          .filter((v): v is number => v !== undefined);
         session?.sendMessage({
           mouse_event: {
             mask: msg.mask ?? 0,
             x: msg.x ?? 0,
             y: msg.y ?? 0,
-            modifiers: [],
+            modifiers,
           },
         });
       } else if (msg.type === 'key') {

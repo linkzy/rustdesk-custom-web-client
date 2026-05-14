@@ -10,8 +10,8 @@ interface RemoteScreenProps {
 
 export function RemoteScreen({ state, controls }: RemoteScreenProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const decoderRef = useRef<VideoFrameDecoder | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const decoderRef = useRef<VideoFrameDecoder | null>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -36,6 +36,36 @@ export function RemoteScreen({ state, controls }: RemoteScreenProps) {
     };
   }, [controls]);
 
+  // Document-level keyboard listeners — avoids focus management issues entirely.
+  // All key events go to the remote while connected.
+  useEffect(() => {
+    const getKbModifiers = (e: KeyboardEvent): string[] => {
+      const mods: string[] = [];
+      if (e.ctrlKey)  mods.push('ctrl');
+      if (e.altKey)   mods.push('alt');
+      if (e.shiftKey) mods.push('shift');
+      if (e.metaKey)  mods.push('meta');
+      return mods;
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      e.preventDefault();
+      controls.sendKey(true, e.key, e.keyCode, getKbModifiers(e));
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      e.preventDefault();
+      controls.sendKey(false, e.key, e.keyCode, getKbModifiers(e));
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('keyup', handleKeyUp);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('keyup', handleKeyUp);
+    };
+  }, [controls]);
+
   const toRemoteCoords = useCallback(
     (clientX: number, clientY: number): { x: number; y: number } => {
       const canvas = canvasRef.current;
@@ -51,7 +81,7 @@ export function RemoteScreen({ state, controls }: RemoteScreenProps) {
     [state.remoteWidth, state.remoteHeight]
   );
 
-  const getModifiers = (e: React.MouseEvent | React.WheelEvent): string[] => {
+  const getMouseModifiers = (e: React.PointerEvent | React.WheelEvent): string[] => {
     const mods: string[] = [];
     if (e.ctrlKey)  mods.push('ctrl');
     if (e.altKey)   mods.push('alt');
@@ -60,39 +90,34 @@ export function RemoteScreen({ state, controls }: RemoteScreenProps) {
     return mods;
   };
 
-  const getKbModifiers = (e: React.KeyboardEvent): string[] => {
-    const mods: string[] = [];
-    if (e.ctrlKey)  mods.push('ctrl');
-    if (e.altKey)   mods.push('alt');
-    if (e.shiftKey) mods.push('shift');
-    if (e.metaKey)  mods.push('meta');
-    return mods;
-  };
-
-  const onMouseMove = useCallback(
-    (e: React.MouseEvent) => {
+  // Use pointer events + setPointerCapture so mouseup is always received
+  // even if the pointer moves outside the canvas before the button is released.
+  const onPointerDown = useCallback(
+    (e: React.PointerEvent<HTMLCanvasElement>) => {
+      e.preventDefault();
+      e.currentTarget.setPointerCapture(e.pointerId);
       const { x, y } = toRemoteCoords(e.clientX, e.clientY);
-      controls.sendMouse(x, y, 0, getModifiers(e));
+      const buttonMask = e.button === 0 ? 1 : e.button === 2 ? 2 : e.button === 1 ? 4 : 0;
+      controls.sendMouse(x, y, buttonMask, getMouseModifiers(e));
     },
     [controls, toRemoteCoords]
   );
 
-  const onMouseDown = useCallback(
-    (e: React.MouseEvent) => {
-      e.preventDefault();
+  const onPointerMove = useCallback(
+    (e: React.PointerEvent<HTMLCanvasElement>) => {
       const { x, y } = toRemoteCoords(e.clientX, e.clientY);
-      const buttonMask = e.button === 0 ? 1 : e.button === 2 ? 2 : 3;
-      controls.sendMouse(x, y, buttonMask, getModifiers(e));
+      controls.sendMouse(x, y, 0, getMouseModifiers(e));
     },
     [controls, toRemoteCoords]
   );
 
-  const onMouseUp = useCallback(
-    (e: React.MouseEvent) => {
+  const onPointerUp = useCallback(
+    (e: React.PointerEvent<HTMLCanvasElement>) => {
       e.preventDefault();
+      e.currentTarget.releasePointerCapture(e.pointerId);
       const { x, y } = toRemoteCoords(e.clientX, e.clientY);
-      const buttonMask = e.button === 0 ? 1 : e.button === 2 ? 2 : 3;
-      controls.sendMouse(x, y, buttonMask | 8, getModifiers(e));
+      const buttonMask = e.button === 0 ? 1 : e.button === 2 ? 2 : e.button === 1 ? 4 : 0;
+      controls.sendMouse(x, y, buttonMask | 8, getMouseModifiers(e));
     },
     [controls, toRemoteCoords]
   );
@@ -102,7 +127,7 @@ export function RemoteScreen({ state, controls }: RemoteScreenProps) {
       e.preventDefault();
       const { x, y } = toRemoteCoords(e.clientX, e.clientY);
       const mask = e.deltaY > 0 ? 0x11 : 0x0f;
-      controls.sendMouse(x, y, mask, getModifiers(e));
+      controls.sendMouse(x, y, mask, getMouseModifiers(e));
     },
     [controls, toRemoteCoords]
   );
@@ -111,38 +136,19 @@ export function RemoteScreen({ state, controls }: RemoteScreenProps) {
     e.preventDefault();
   }, []);
 
-  const onKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      e.preventDefault();
-      controls.sendKey(true, e.key, e.keyCode, getKbModifiers(e));
-    },
-    [controls]
-  );
-
-  const onKeyUp = useCallback(
-    (e: React.KeyboardEvent) => {
-      e.preventDefault();
-      controls.sendKey(false, e.key, e.keyCode, getKbModifiers(e));
-    },
-    [controls]
-  );
-
   return (
     <div
       ref={containerRef}
       className={styles.container}
-      tabIndex={0}
-      onKeyDown={onKeyDown}
-      onKeyUp={onKeyUp}
     >
       <canvas
         ref={canvasRef}
         className={styles.canvas}
         width={state.remoteWidth || 1920}
         height={state.remoteHeight || 1080}
-        onMouseMove={onMouseMove}
-        onMouseDown={onMouseDown}
-        onMouseUp={onMouseUp}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
         onWheel={onWheel}
         onContextMenu={onContextMenu}
       />
