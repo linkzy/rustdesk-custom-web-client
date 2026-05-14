@@ -87,7 +87,10 @@ export class Session {
         this.handlePeerInfo(msg.peer_info);
       } else if (msg.test_delay) {
         // Echo keepalive back to peer — silence for ~10s causes peer to close with 1006
-        this.sendMessage({ test_delay: { time: msg.test_delay.time, from_client: true } });
+        // time is decoded as string by protobufjs (longs: String), must convert to number to re-encode
+        const echoTime = Number(msg.test_delay.time) || 0;
+        this.sendMessage({ test_delay: { time: echoTime, from_client: true } });
+        console.log('[session] Echoed TestDelay time=' + echoTime);
       } else {
         // Other messages (cursor, clipboard, etc.) — ignore for now
       }
