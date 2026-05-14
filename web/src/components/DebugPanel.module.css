@@ -1,0 +1,70 @@
+.root {
+  position: fixed;
+  bottom: 0;
+  right: 0;
+  z-index: 9999;
+  font-family: monospace;
+  font-size: 11px;
+}
+
+.toggle {
+  display: block;
+  background: rgba(0, 0, 0, 0.75);
+  color: #0f0;
+  border: 1px solid #0f0;
+  padding: 4px 10px;
+  cursor: pointer;
+  border-radius: 4px 0 0 0;
+}
+
+.badge {
+  margin-left: 6px;
+  background: #0f0;
+  color: #000;
+  border-radius: 8px;
+  padding: 0 5px;
+  font-size: 10px;
+}
+
+.panel {
+  background: rgba(0, 0, 0, 0.92);
+  border: 1px solid #0f0;
+  border-bottom: none;
+  border-right: none;
+  width: 520px;
+  max-width: 95vw;
+}
+
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 8px;
+  border-bottom: 1px solid #333;
+}
+
+.count { color: #888; }
+
+.copyBtn {
+  background: #1a1a1a;
+  color: #0f0;
+  border: 1px solid #0f0;
+  padding: 2px 8px;
+  cursor: pointer;
+  border-radius: 3px;
+}
+
+.logArea {
+  height: 220px;
+  overflow-y: auto;
+  padding: 6px 8px;
+}
+
+.line {
+  color: #ccc;
+  white-space: pre-wrap;
+  word-break: break-all;
+  line-height: 1.5;
+  border-bottom: 1px solid #111;
+  padding: 1px 0;
+}

@@ -1,6 +1,7 @@
 import { useGateway } from './hooks/useGateway';
 import { ConnectForm } from './components/ConnectForm';
 import { RemoteScreen } from './components/RemoteScreen';
+import { DebugPanel } from './components/DebugPanel';
 import styles from './App.module.css';
 
 function App() {
@@ -21,7 +22,7 @@ function App() {
             </button>
           </div>
           <div className={styles.screen}>
-            <RemoteScreen state={state} controls={controls} />
+            <RemoteScreen state={state} controls={controls} onLog={controls.addLog} />
           </div>
         </>
       ) : (
@@ -32,6 +33,7 @@ function App() {
           error={state.error}
         />
       )}
+      <DebugPanel logs={state.logs} />
     </div>
   );
 }
