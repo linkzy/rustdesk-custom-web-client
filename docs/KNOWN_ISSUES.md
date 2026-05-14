@@ -7,8 +7,8 @@
 
 ## KI-001 — Session Disconnects After ~10 Seconds
 
-**Status:** Known / Not yet fixed  
-**Severity:** High — makes the web client unusable for sustained sessions  
+**Status:** ✅ Fixed  
+**Severity:** High — was making the web client unusable for sustained sessions  
 **Affected component:** `gateway/src/session.ts`
 
 ### Symptoms
@@ -43,11 +43,20 @@ When the session is active, gateway logs show `test_delay` in the decoded fields
 
 The relay closure code `1006` (abnormal close / no close frame) indicates the **server** dropped the TCP connection — not the client or hbbr itself.
 
-### Fix (Not Yet Implemented)
-In `session.ts → handleRelayMessage`, add a handler:
+### Fix Applied
+In `session.ts → handleRelayMessage`, added handler alongside `video_frame` and `peer_info`:
 ```typescript
 } else if (msg.test_delay) {
-  // Echo back with from_client = true so the server knows we are alive
+  // Echo keepalive back to peer — silence for ~10s causes peer to close with 1006
+  this.sendMessage({ test_delay: { time: msg.test_delay.time, from_client: true } });
+}
+```
+The `time` field is echoed back exactly as received so the server can compute RTT.
+
+### ~~Fix (Not Yet Implemented)~~
+~~In `session.ts → handleRelayMessage`, add a handler:~~
+```typescript
+} else if (msg.test_delay) {
   this.sendMessage({
     test_delay: {
       time: msg.test_delay.time,
@@ -56,7 +65,7 @@ In `session.ts → handleRelayMessage`, add a handler:
   });
 }
 ```
-This is a one-liner fix — the `time` field must be echoed back exactly as received so the server can compute RTT.
+~~This is a one-liner fix — the `time` field must be echoed back exactly as received so the server can compute RTT.~~
 
 ---
 

@@ -85,6 +85,9 @@ export class Session {
         this.handleVideoFrame(msg.video_frame);
       } else if (msg.peer_info) {
         this.handlePeerInfo(msg.peer_info);
+      } else if (msg.test_delay) {
+        // Echo keepalive back to peer — silence for ~10s causes peer to close with 1006
+        this.sendMessage({ test_delay: { time: msg.test_delay.time, from_client: true } });
       } else {
         // Other messages (cursor, clipboard, etc.) — ignore for now
       }
