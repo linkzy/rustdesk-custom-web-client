@@ -15,14 +15,19 @@ wss.on('connection', (ws: WebSocket) => {
   console.log('[gateway] Browser connected');
   let session: Session | null = null;
 
+  const sendLog = (msg: string) => {
+    console.log('[gw->browser]', msg);
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: 'log', message: msg }));
+    }
+  };
+
   ws.on('message', async (data) => {
     try {
       const msg = JSON.parse(data.toString());
 
       if (msg.type === 'connect') {
-        if (session) {
-          session.disconnect();
-        }
+        if (session) session.disconnect();
         session = new Session({
           targetId: msg.targetId,
           password: msg.password ?? '',
@@ -32,32 +37,42 @@ wss.on('connection', (ws: WebSocket) => {
           await session.connect();
         } catch (e: any) {
           console.error('[gateway] Session connect error:', e.message);
+          sendLog(`connect error: ${e.message}`);
           if (ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({ type: 'error', message: e.message }));
           }
           session = null;
         }
       } else if (msg.type === 'mouse') {
-        const modifiers = ((msg.modifiers ?? []) as string[])
-          .map((m) => MODIFIER_MAP[m])
-          .filter((v): v is number => v !== undefined);
-        session?.sendMessage({
-          mouse_event: {
-            mask: msg.mask ?? 0,
-            x: msg.x ?? 0,
-            y: msg.y ?? 0,
-            modifiers,
-          },
-        });
+        if (!session) { sendLog('mouse: no session'); return; }
+        try {
+          const modifiers = ((msg.modifiers ?? []) as string[])
+            .map((m) => MODIFIER_MAP[m])
+            .filter((v): v is number => v !== undefined);
+          session.sendMessage({
+            mouse_event: {
+              mask: msg.mask ?? 0,
+              x: msg.x ?? 0,
+              y: msg.y ?? 0,
+              modifiers,
+            },
+          });
+        } catch (e: any) {
+          sendLog(`mouse encode error: ${e.message}`);
+        }
       } else if (msg.type === 'key') {
-        if (session) {
+        if (!session) { sendLog('key: no session'); return; }
+        try {
           const payload = buildKeyPayload({
             down: msg.down ?? true,
             key: msg.key ?? '',
             keyCode: msg.keyCode ?? 0,
             modifiers: msg.modifiers ?? [],
           });
+          sendLog(`key down=${msg.down} key="${msg.key}" → ${JSON.stringify(payload.key_event)}`);
           session.sendMessage(payload);
+        } catch (e: any) {
+          sendLog(`key encode error: ${e.message}`);
         }
       } else if (msg.type === 'disconnect') {
         session?.disconnect();

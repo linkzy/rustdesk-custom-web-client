@@ -69,34 +69,44 @@ export function RemoteScreen({ state, controls, onLog }: RemoteScreenProps) {
       return m;
     };
 
-    const btnMask = (btn: number) => btn === 0 ? 1 : btn === 2 ? 2 : btn === 1 ? 4 : 0;
+    // RustDesk mask = (button << 3) | event_type
+    // event_type: 0=move, 1=down, 2=up, 3=wheel
+    // button: 0x01=left, 0x02=right, 0x04=middle
+    const MOUSE_TYPE_DOWN  = 1;
+    const MOUSE_TYPE_UP    = 2;
+    const MOUSE_TYPE_WHEEL = 3;
+    // Map browser button index → RustDesk button bit
+    const BUTTON_MAP: Record<number, number> = { 0: 0x01, 1: 0x04, 2: 0x02 };
 
     // Mouse
     const onMouseDown = (e: MouseEvent) => {
       e.preventDefault();
       const { x, y } = toCoords(e.clientX, e.clientY);
-      const mask = btnMask(e.button);
+      const btn = BUTTON_MAP[e.button] ?? 0x01;
+      const mask = (btn << 3) | MOUSE_TYPE_DOWN;
       log(`mousedown btn=${e.button} mask=${mask} x=${x} y=${y}`);
       controlsRef.current.sendMouse(x, y, mask, getMods(e));
     };
 
     const onMouseMove = (e: MouseEvent) => {
       const { x, y } = toCoords(e.clientX, e.clientY);
-      controlsRef.current.sendMouse(x, y, 0, []);
+      controlsRef.current.sendMouse(x, y, 0, []); // mask=0 = move
     };
 
     // mouseup on document catches release even if pointer left the canvas
     const onMouseUp = (e: MouseEvent) => {
       const { x, y } = toCoords(e.clientX, e.clientY);
-      const mask = btnMask(e.button) | 8;
+      const btn = BUTTON_MAP[e.button] ?? 0x01;
+      const mask = (btn << 3) | MOUSE_TYPE_UP;
       log(`mouseup btn=${e.button} mask=${mask} x=${x} y=${y}`);
       controlsRef.current.sendMouse(x, y, mask, getMods(e));
     };
 
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
-      const { x, y } = toCoords(e.clientX, e.clientY);
-      controlsRef.current.sendMouse(x, y, e.deltaY > 0 ? 0x11 : 0x0f, getMods(e));
+      // For wheel events x/y are scroll deltas; positive y = scroll down
+      const scrollY = e.deltaY > 0 ? 1 : -1;
+      controlsRef.current.sendMouse(0, scrollY, MOUSE_TYPE_WHEEL, getMods(e));
     };
 
     // Keyboard
