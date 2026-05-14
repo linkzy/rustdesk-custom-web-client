@@ -1,0 +1,30 @@
+# ─── Dependencies ────────────────────────────────────────────────────────────
+node_modules/
+**/node_modules/
+
+# ─── Build output ─────────────────────────────────────────────────────────────
+dist/
+dist-ssr/
+**/dist/
+
+# ─── Environment / secrets ───────────────────────────────────────────────────
+# NEVER commit real .env files — they contain server IPs and keys
+.env
+**/.env
+# Allow .env.example (placeholder values only)
+!.env.example
+!**/.env.example
+
+# ─── Logs ─────────────────────────────────────────────────────────────────────
+*.log
+logs/
+gateway/session.log
+
+# ─── OS / editor ──────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.vscode/
+!.vscode/extensions.json
+.idea/
+*.suo
+*.sw?

@@ -1,0 +1,33 @@
+services:
+  gateway:
+    build:
+      context: ./gateway
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      - HBBS_HOST=${HBBS_HOST}
+      - HBBS_WS_PORT=${HBBS_WS_PORT:-21118}
+      - HBBR_HOST=${HBBR_HOST}
+      - HBBR_WS_PORT=${HBBR_WS_PORT:-21119}
+      - SERVER_KEY=${SERVER_KEY}
+      - GATEWAY_PORT=4000
+    expose:
+      - "4000"
+    networks:
+      - rclient
+
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-80}:80"
+    depends_on:
+      - gateway
+    networks:
+      - rclient
+
+networks:
+  rclient:
+    driver: bridge

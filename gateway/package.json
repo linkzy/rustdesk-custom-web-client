@@ -1,0 +1,27 @@
+{
+  "name": "rclient-gateway",
+  "version": "0.1.0",
+  "description": "RustDesk web gateway service",
+  "main": "dist/server.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
+    "start": "node dist/server.js",
+    "lint": "eslint src --ext .ts"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "protobufjs": "^7.4.0",
+    "tweetnacl": "^1.0.3",
+    "tweetnacl-util": "^0.15.1",
+    "uuid": "^11.1.0",
+    "ws": "^8.18.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/uuid": "^10.0.0",
+    "@types/ws": "^8.5.14",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.8.0"
+  }
+}

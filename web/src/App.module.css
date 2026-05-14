@@ -1,0 +1,48 @@
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: #0f172a;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.5rem 1rem;
+  background: #1e293b;
+  border-bottom: 1px solid #334155;
+  flex-shrink: 0;
+  height: 44px;
+}
+
+.toolbarTitle {
+  font-weight: 700;
+  color: #e2e8f0;
+  font-size: 1rem;
+}
+
+.toolbarInfo {
+  color: #64748b;
+  font-size: 0.8rem;
+  flex: 1;
+}
+
+.disconnectBtn {
+  padding: 0.3rem 0.8rem;
+  background: #ef4444;
+  border: none;
+  border-radius: 6px;
+  color: white;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.disconnectBtn:hover {
+  background: #dc2626;
+}
+
+.screen {
+  flex: 1;
+  overflow: hidden;
+}
