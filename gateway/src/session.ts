@@ -61,10 +61,15 @@ export class Session {
     });
   }
 
+  // Track acks sent
+  private acksSent = 0;
+
   private reportGwStats(): void {
     const elapsedSec = (Date.now() - this.gwFpsWindowStart) / 1000;
     const gwFps = elapsedSec > 0 ? Math.round((this.gwFrameCount / elapsedSec) * 10) / 10 : 0;
+    console.log(`[session] GW FPS: ${gwFps} (frames=${this.gwFrameCount}, acks_sent=${this.acksSent})`);
     this.gwFrameCount = 0;
+    this.acksSent = 0;
     this.gwFpsWindowStart = Date.now();
     this.sendBrowserJson({ type: 'gw_stats', gwFps });
   }
@@ -217,7 +222,23 @@ export class Session {
     // In RustDesk 1.3+, the client must explicitly request which display to capture.
     this.sendMessage({ misc: { capture_displays: { set: [0] } } });
 
-    console.log('[session] Sent video_received + option (fps=30) + auto_adjust_fps + full_speed_fps + capture_displays');
+    // Tell the host which encodings we support so it picks the best hardware encoder.
+    // Without this, the host may use a slow software fallback.
+    this.sendMessage({
+      misc: {
+        supported_encoding: {
+          h264: true,
+          h265: true,
+          vp8: true,
+          av1: false,
+        },
+      },
+    });
+
+    // Request a fresh keyframe to kick-start the video stream.
+    this.sendMessage({ misc: { refresh_video: true } });
+
+    console.log('[session] Sent video_received + option + auto_adjust_fps + full_speed_fps + capture_displays + supported_encoding + refresh_video');
   }
 
   private handleMisc(misc: any): void {
@@ -344,8 +365,8 @@ export class Session {
     }
 
     // Ack every received frame so the host's ack-driven capture loop runs at full speed.
-    // This is the key to achieving 30 FPS — the host sends next frame only after ack arrives.
     this.sendMessage({ misc: { video_received: true } });
+    this.acksSent++;
   }
 
   // Send a protobuf Message to the remote peer (encrypted if key is available)
