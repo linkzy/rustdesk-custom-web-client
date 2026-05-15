@@ -156,7 +156,7 @@ export class Session {
           image_quality: 3,  // Balanced (Low=2, Balanced=3, Best=4)
           custom_fps: 30,    // request 30 FPS from host
         },
-        video_ack_required: false,
+        video_ack_required: true,
         session_id: Math.floor(Math.random() * 0xFFFFFFFF),
         version: '1.3.8',
       },
@@ -342,7 +342,10 @@ export class Session {
         this.options.browserWs.send(packet);
       }
     }
-  }
+
+    // Ack every received frame so the host's ack-driven capture loop runs at full speed.
+    // This is the key to achieving 30 FPS — the host sends next frame only after ack arrives.
+    this.sendMessage({ misc: { video_received: true } });
 
   // Send a protobuf Message to the remote peer (encrypted if key is available)
   sendMessage(payload: Record<string, unknown>): void {
