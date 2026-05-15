@@ -28,7 +28,12 @@ export class Session {
   private options: SessionOptions;
   private remoteWidth = 0;
   private remoteHeight = 0;
-  private targetId = '';  // stripped (no spaces) target RustDesk ID
+  private targetId = '';
+
+  // Gateway-side frame rate tracking
+  private gwFrameCount = 0;
+  private gwFpsWindowStart = 0;
+  private gwStatsInterval: ReturnType<typeof setInterval> | null = null;
 
   constructor(options: SessionOptions) {
     this.options = options;
@@ -48,10 +53,20 @@ export class Session {
     this.relay = await connectRelay(targetId, relayServer, uuid);
     console.log('[session] Relay connected. Waiting for handshake...');
 
+    this.gwFpsWindowStart = Date.now();
+    this.gwStatsInterval = setInterval(() => this.reportGwStats(), 1000);
+
     this.relay.onMessage((data: Buffer) => {
-      console.log(`[relay] Received ${data.length} bytes from peer`);
       this.handleRelayMessage(data);
     });
+  }
+
+  private reportGwStats(): void {
+    const elapsedSec = (Date.now() - this.gwFpsWindowStart) / 1000;
+    const gwFps = elapsedSec > 0 ? Math.round((this.gwFrameCount / elapsedSec) * 10) / 10 : 0;
+    this.gwFrameCount = 0;
+    this.gwFpsWindowStart = Date.now();
+    this.sendBrowserJson({ type: 'gw_stats', gwFps });
   }
 
   private handleRelayMessage(data: Buffer): void {
@@ -70,8 +85,6 @@ export class Session {
       }
 
       const msg = decodeMessage(this.root!, bytes) as any;
-      const msgFields = Object.keys(msg).filter(k => msg[k] !== null && msg[k] !== undefined && msg[k] !== false && msg[k] !== 0 && msg[k] !== '');
-      console.log('[session] Decoded message fields:', msgFields, '| raw hex:', Buffer.from(bytes).toString('hex').slice(0, 80));
 
       if (msg.signed_id) {
         this.handleSignedId(msg.signed_id);
@@ -82,17 +95,16 @@ export class Session {
       } else if (msg.public_key) {
         this.handlePublicKey(msg.public_key);
       } else if (msg.video_frame) {
+        this.gwFrameCount++;
         this.handleVideoFrame(msg.video_frame);
       } else if (msg.peer_info) {
         this.handlePeerInfo(msg.peer_info);
       } else if (msg.test_delay) {
-        // Echo keepalive back to peer — silence for ~10s causes peer to close with 1006
-        // time is decoded as string by protobufjs (longs: String), must convert to number to re-encode
         const echoTime = Number(msg.test_delay.time) || 0;
         this.sendMessage({ test_delay: { time: echoTime, from_client: true } });
-        console.log('[session] Echoed TestDelay time=' + echoTime);
       } else {
-        // Other messages (cursor, clipboard, etc.) — ignore for now
+        const fields = Object.keys(msg).filter(k => msg[k] !== null && msg[k] !== undefined && msg[k] !== false && msg[k] !== 0 && msg[k] !== '');
+        if (fields.length) console.log('[session] Unhandled message fields:', fields);
       }
     } catch (e) {
       console.error('[session] Error handling relay message:', e);
@@ -288,6 +300,10 @@ export class Session {
   }
 
   disconnect(): void {
+    if (this.gwStatsInterval) {
+      clearInterval(this.gwStatsInterval);
+      this.gwStatsInterval = null;
+    }
     this.relay?.close();
     this.relay = null;
     console.log('[session] Disconnected');

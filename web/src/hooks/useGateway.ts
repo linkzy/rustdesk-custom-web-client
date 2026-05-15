@@ -5,10 +5,11 @@ export type ConnectionStatus = 'idle' | 'connecting' | 'connected' | 'error' | '
 
 export interface ConnectionStats {
   fps: number;
+  gwFps: number;        // frames per second received by gateway from relay
   frameIntervalMs: number;
   decodeTimeMs: number;
   pingMs: number | null;
-  lastFrameAt: number; // performance.now() of last decoded frame (0 = none yet)
+  lastFrameAt: number;
 }
 
 export interface GatewayState {
@@ -41,6 +42,7 @@ function ts() {
 
 const DEFAULT_STATS: ConnectionStats = {
   fps: 0,
+  gwFps: 0,
   frameIntervalMs: 0,
   decodeTimeMs: 0,
   pingMs: null,
@@ -128,6 +130,8 @@ export function useGateway(): [GatewayState, GatewayControls] {
               error: null,
             }));
             startPing();
+          } else if (msg.type === 'gw_stats') {
+            setState((s) => ({ ...s, stats: { ...s.stats, gwFps: msg.gwFps ?? 0 } }));
           } else if (msg.type === 'pong') {
             const pingMs = Math.round(performance.now() - msg.ts);
             setState((s) => ({ ...s, stats: { ...s.stats, pingMs } }));

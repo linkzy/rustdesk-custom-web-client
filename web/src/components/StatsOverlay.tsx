@@ -31,6 +31,12 @@ export function StatsOverlay({ stats }: StatsOverlayProps) {
   return (
     <div className={styles.overlay}>
       <div className={styles.row}>
+        <span className={styles.label}>GW FPS</span>
+        <span className={`${styles.value} ${color(30 - stats.gwFps, 15, 25)}`}>
+          {stats.gwFps > 0 ? stats.gwFps : '—'}
+        </span>
+      </div>
+      <div className={styles.row}>
         <span className={styles.label}>FPS</span>
         <span className={`${styles.value} ${color(30 - stats.fps, 15, 25)}`}>
           {stats.fps > 0 ? stats.fps : '—'}
