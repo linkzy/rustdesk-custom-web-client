@@ -26,7 +26,12 @@ wss.on('connection', (ws: WebSocket) => {
     try {
       const msg = JSON.parse(data.toString());
 
-      if (msg.type === 'connect') {
+      if (msg.type === 'ping') {
+        // Immediately echo timestamp back so browser can compute round-trip time
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: 'pong', ts: msg.ts }));
+        }
+      } else if (msg.type === 'connect') {
         if (session) session.disconnect();
         session = new Session({
           targetId: msg.targetId,

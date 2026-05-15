@@ -1,0 +1,36 @@
+.overlay {
+  position: fixed;
+  top: 52px; /* below toolbar */
+  right: 12px;
+  background: rgba(0, 0, 0, 0.72);
+  color: #e0e0e0;
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
+  border-radius: 6px;
+  padding: 8px 12px;
+  z-index: 100;
+  pointer-events: none;
+  min-width: 140px;
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  line-height: 1.8;
+}
+
+.label {
+  color: #888;
+}
+
+.value {
+  font-weight: bold;
+  text-align: right;
+}
+
+.good  { color: #4caf50; }
+.warn  { color: #ff9800; }
+.bad   { color: #f44336; }

@@ -2,6 +2,7 @@ import { useGateway } from './hooks/useGateway';
 import { ConnectForm } from './components/ConnectForm';
 import { RemoteScreen } from './components/RemoteScreen';
 import { DebugPanel } from './components/DebugPanel';
+import { StatsOverlay } from './components/StatsOverlay';
 import styles from './App.module.css';
 
 function App() {
@@ -24,6 +25,7 @@ function App() {
           <div className={styles.screen}>
             <RemoteScreen state={state} controls={controls} onLog={controls.addLog} />
           </div>
+          <StatsOverlay stats={state.stats} />
         </>
       ) : (
         <ConnectForm

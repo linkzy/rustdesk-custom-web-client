@@ -31,15 +31,18 @@ export function RemoteScreen({ state, controls, onLog }: RemoteScreenProps) {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const decoder = new VideoFrameDecoder((frame) => {
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-      if (canvas.width !== frame.displayWidth || canvas.height !== frame.displayHeight) {
-        canvas.width = frame.displayWidth;
-        canvas.height = frame.displayHeight;
-      }
-      ctx.drawImage(frame, 0, 0);
-    });
+    const decoder = new VideoFrameDecoder(
+      (frame) => {
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        if (canvas.width !== frame.displayWidth || canvas.height !== frame.displayHeight) {
+          canvas.width = frame.displayWidth;
+          canvas.height = frame.displayHeight;
+        }
+        ctx.drawImage(frame, 0, 0);
+      },
+      (stats) => controlsRef.current.updateFrameStats(stats),
+    );
     decoderRef.current = decoder;
     controlsRef.current.onVideoFrame((data) => decoder.handleFrame(data));
     return () => { decoder.close(); decoderRef.current = null; };

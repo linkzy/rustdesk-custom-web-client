@@ -99,4 +99,25 @@ Test input forwarding from a **second physical device** (phone browser, another 
 
 ---
 
+## KI-004 — Mouse Scroll Wheel Direction Inverted
+
+**Status:** Open  
+**Severity:** Low — usable but unintuitive  
+**Affected component:** `web/src/components/RemoteScreen.tsx`
+
+### Symptoms
+- Scrolling down in the browser scrolls **up** on the remote machine, and vice versa
+
+### Root Cause
+The `deltaY` sign mapping to the RustDesk wheel protocol may be inverted. In `RemoteScreen.tsx` the wheel handler sends `y = e.deltaY > 0 ? 1 : -1`. On the host side (`input_service.rs`) the y value is used directly on Windows (`y = evt.y`) but inverted on non-Windows (`y = -y`). The correct direction for the Windows target needs to be verified.
+
+### Fix
+In `RemoteScreen.tsx`, invert the scroll direction:
+```typescript
+const scrollY = e.deltaY > 0 ? -1 : 1;
+```
+If the host is Linux/macOS the logic may differ — test on both targets.
+
+---
+
 *Last updated: 2026-05-14*

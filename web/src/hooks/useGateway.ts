@@ -1,6 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type { DecoderStats } from '../video/decoder';
 
 export type ConnectionStatus = 'idle' | 'connecting' | 'connected' | 'error' | 'disconnected';
+
+export interface ConnectionStats {
+  fps: number;
+  frameIntervalMs: number;
+  decodeTimeMs: number;
+  pingMs: number | null;
+  lastFrameAt: number; // performance.now() of last decoded frame (0 = none yet)
+}
 
 export interface GatewayState {
   status: ConnectionStatus;
@@ -9,6 +18,7 @@ export interface GatewayState {
   remoteHeight: number;
   codec: string | null;
   logs: string[];
+  stats: ConnectionStats;
 }
 
 export interface GatewayControls {
@@ -18,18 +28,29 @@ export interface GatewayControls {
   sendKey: (down: boolean, key: string, keyCode: number, modifiers?: string[]) => void;
   onVideoFrame: (handler: (data: ArrayBuffer) => void) => void;
   addLog: (msg: string) => void;
+  updateFrameStats: (s: DecoderStats) => void;
 }
 
 const GATEWAY_WS_URL = '/ws';
 const MAX_LOGS = 200;
+const PING_INTERVAL_MS = 3000;
 
 function ts() {
   return new Date().toISOString().slice(11, 23); // HH:MM:SS.mmm
 }
 
+const DEFAULT_STATS: ConnectionStats = {
+  fps: 0,
+  frameIntervalMs: 0,
+  decodeTimeMs: 0,
+  pingMs: null,
+  lastFrameAt: 0,
+};
+
 export function useGateway(): [GatewayState, GatewayControls] {
   const wsRef = useRef<WebSocket | null>(null);
   const videoHandlerRef = useRef<((data: ArrayBuffer) => void) | null>(null);
+  const pingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const [state, setState] = useState<GatewayState>({
     status: 'idle',
@@ -38,16 +59,47 @@ export function useGateway(): [GatewayState, GatewayControls] {
     remoteHeight: 0,
     codec: null,
     logs: [],
+    stats: DEFAULT_STATS,
   });
 
   const addLog = useCallback((msg: string) => {
     setState((s) => ({ ...s, logs: [...s.logs.slice(-(MAX_LOGS - 1)), `[${ts()}] ${msg}`] }));
   }, []);
 
+  const updateFrameStats = useCallback((decoderStats: DecoderStats) => {
+    setState((s) => ({
+      ...s,
+      stats: {
+        ...s.stats,
+        fps: decoderStats.fps,
+        frameIntervalMs: decoderStats.frameIntervalMs,
+        decodeTimeMs: decoderStats.decodeTimeMs,
+        lastFrameAt: decoderStats.lastFrameAt,
+      },
+    }));
+  }, []);
+
+  const startPing = useCallback(() => {
+    if (pingIntervalRef.current) clearInterval(pingIntervalRef.current);
+    pingIntervalRef.current = setInterval(() => {
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify({ type: 'ping', ts: performance.now() }));
+      }
+    }, PING_INTERVAL_MS);
+  }, []);
+
+  const stopPing = useCallback(() => {
+    if (pingIntervalRef.current) {
+      clearInterval(pingIntervalRef.current);
+      pingIntervalRef.current = null;
+    }
+  }, []);
+
   const connect = useCallback((targetId: string, password: string) => {
     if (wsRef.current) wsRef.current.close();
+    stopPing();
 
-    setState((s) => ({ ...s, status: 'connecting', error: null }));
+    setState((s) => ({ ...s, status: 'connecting', error: null, stats: DEFAULT_STATS }));
     addLog(`connect → targetId=${targetId}`);
 
     const ws = new WebSocket(GATEWAY_WS_URL);
@@ -75,12 +127,17 @@ export function useGateway(): [GatewayState, GatewayControls] {
               codec: msg.codec,
               error: null,
             }));
+            startPing();
+          } else if (msg.type === 'pong') {
+            const pingMs = Math.round(performance.now() - msg.ts);
+            setState((s) => ({ ...s, stats: { ...s.stats, pingMs } }));
           } else if (msg.type === 'error') {
             addLog(`error: ${msg.message}`);
             setState((s) => ({ ...s, status: 'error', error: msg.message }));
           } else if (msg.type === 'disconnected') {
             addLog('disconnected by gateway');
             setState((s) => ({ ...s, status: 'disconnected' }));
+            stopPing();
           } else if (msg.type === 'log') {
             addLog(`[gw] ${msg.message}`);
           }
@@ -92,6 +149,7 @@ export function useGateway(): [GatewayState, GatewayControls] {
 
     ws.onclose = (e) => {
       addLog(`WS closed code=${e.code}`);
+      stopPing();
       setState((s) =>
         s.status === 'connected' ? { ...s, status: 'disconnected' } : s
       );
@@ -99,17 +157,19 @@ export function useGateway(): [GatewayState, GatewayControls] {
 
     ws.onerror = () => {
       addLog('WS error');
+      stopPing();
       setState((s) => ({ ...s, status: 'error', error: 'WebSocket connection failed' }));
     };
-  }, [addLog]);
+  }, [addLog, startPing, stopPing]);
 
   const disconnect = useCallback(() => {
+    stopPing();
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({ type: 'disconnect' }));
       wsRef.current.close();
     }
-    setState((s) => ({ ...s, status: 'idle' }));
-  }, []);
+    setState((s) => ({ ...s, status: 'idle', stats: DEFAULT_STATS }));
+  }, [stopPing]);
 
   const sendMouse = useCallback((x: number, y: number, mask: number, modifiers: string[] = []) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -128,11 +188,14 @@ export function useGateway(): [GatewayState, GatewayControls] {
   }, []);
 
   useEffect(() => {
-    return () => { wsRef.current?.close(); };
-  }, []);
+    return () => {
+      wsRef.current?.close();
+      stopPing();
+    };
+  }, [stopPing]);
 
   return [
     state,
-    { connect, disconnect, sendMouse, sendKey, onVideoFrame, addLog },
+    { connect, disconnect, sendMouse, sendKey, onVideoFrame, addLog, updateFrameStats },
   ];
 }
