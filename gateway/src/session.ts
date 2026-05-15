@@ -34,6 +34,7 @@ export class Session {
   private gwFrameCount = 0;
   private gwFpsWindowStart = 0;
   private gwStatsInterval: ReturnType<typeof setInterval> | null = null;
+  private handshakeTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(options: SessionOptions) {
     this.options = options;
@@ -55,6 +56,15 @@ export class Session {
 
     this.gwFpsWindowStart = Date.now();
     this.gwStatsInterval = setInterval(() => this.reportGwStats(), 1000);
+
+    // If the peer never shows up on the relay within 20s, fail fast with a clear error
+    this.handshakeTimer = setTimeout(() => {
+      if (!this.symmetricKey) {
+        console.error('[session] Handshake timeout — peer connected to relay but never sent handshake');
+        this.sendBrowserJson({ type: 'error', message: 'Handshake timeout — make sure RustDesk is running on the host and connected to your server' });
+        this.disconnect();
+      }
+    }, 20000);
 
     this.relay.onMessage((data: Buffer) => {
       this.handleRelayMessage(data);
@@ -189,6 +199,25 @@ export class Session {
     // Without this the host may throttle heavily waiting for a readiness signal.
     this.sendMessage({ misc: { video_received: true } });
     console.log('[session] Sent video_received signal');
+
+    // Declare our codec support so the host knows what we can decode
+    this.sendMessage({
+      misc: {
+        supported_encoding: { h264: true, vp9: true, vp8: true, av1: true },
+      },
+    });
+
+    // Re-send FPS request as a post-login Misc option update.
+    // Some hosts only apply custom_fps from post-login updates, not the LoginRequest.
+    this.sendMessage({
+      misc: {
+        option: {
+          custom_fps: 30,
+          image_quality: 3,  // Balanced
+        },
+      },
+    });
+    console.log('[session] Sent supported_encoding and option update (fps=30)');
   }
 
   private handleSignedId(signedId: { id?: any }): void {
@@ -242,6 +271,11 @@ export class Session {
       this.symmetricKey = symKey;
       this.recvSeq = 0n;
       this.sendSeq = 0n;
+      // Clear handshake timeout — peer showed up
+      if (this.handshakeTimer) {
+        clearTimeout(this.handshakeTimer);
+        this.handshakeTimer = null;
+      }
       console.log('[session] Sent PublicKey with symmetric key. Session encryption active.');
     } catch (e) {
       console.error('[session] handleSignedId failed:', e);
@@ -307,6 +341,10 @@ export class Session {
   }
 
   disconnect(): void {
+    if (this.handshakeTimer) {
+      clearTimeout(this.handshakeTimer);
+      this.handshakeTimer = null;
+    }
     if (this.gwStatsInterval) {
       clearInterval(this.gwStatsInterval);
       this.gwStatsInterval = null;
