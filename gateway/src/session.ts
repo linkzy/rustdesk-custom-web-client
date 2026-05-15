@@ -134,7 +134,7 @@ export class Session {
     const loginRequest = {
       login_request: {
         username: this.targetId,
-        password: passwordBytes,  // Uint8Array — raw SHA256 bytes
+        password: passwordBytes,
         my_id: 'rclient-web',
         my_name: 'Web Browser',
         option: {
@@ -145,6 +145,8 @@ export class Session {
             ability_av1:  1,
             prefer: 2,  // H264
           },
+          image_quality: 3,  // Balanced (Low=2, Balanced=3, Best=4)
+          custom_fps: 30,    // request 30 FPS from host
         },
         video_ack_required: false,
         session_id: Math.floor(Math.random() * 0xFFFFFFFF),
@@ -182,6 +184,11 @@ export class Session {
       height: this.remoteHeight,
       codec: 'h264',
     });
+
+    // Tell host we're ready to receive video at full rate.
+    // Without this the host may throttle heavily waiting for a readiness signal.
+    this.sendMessage({ misc: { video_received: true } });
+    console.log('[session] Sent video_received signal');
   }
 
   private handleSignedId(signedId: { id?: any }): void {
