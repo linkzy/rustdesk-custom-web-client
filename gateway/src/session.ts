@@ -188,7 +188,19 @@ export class Session {
     // Tell host we're ready to receive video at full rate.
     // Without this the host may throttle heavily waiting for a readiness signal.
     this.sendMessage({ misc: { video_received: true } });
-    console.log('[session] Sent video_received signal');
+
+    // Post-login option update: some hosts only apply custom_fps from a Misc option
+    // message after login, not from the LoginRequest option field.
+    // Use Low quality (2) to maximise encode speed and frame rate.
+    this.sendMessage({
+      misc: {
+        option: {
+          custom_fps: 30,
+          image_quality: 2,  // Low — faster encoding = higher FPS
+        },
+      },
+    });
+    console.log('[session] Sent video_received + post-login option (fps=30, quality=Low)');
   }
 
   private handleSignedId(signedId: { id?: any }): void {
