@@ -107,14 +107,16 @@ export class Session {
       } else if (msg.misc) {
         this.handleMisc(msg.misc);
       } else if (msg.test_delay) {
-        // Log test_delay from host to understand its adaptive quality state
+        // Host sends TestDelay every 1s to measure RTT. We must echo it back with
+        // from_client=false so the host processes it as a delay response (not a
+        // client-initiated ping). The host uses the measured RTT to drive VIDEO_QOS
+        // FPS adaptation — without this, FPS stays at minimum.
         if (!msg.test_delay.from_client) {
           const tb = Number(msg.test_delay.target_bitrate) || 0;
           if (tb) console.log(`[session] test_delay from host: target_bitrate=${tb}`);
+          const echoTime = Number(msg.test_delay.time) || 0;
+          this.sendMessage({ test_delay: { time: echoTime, from_client: false, last_delay: 0 } });
         }
-        const echoTime = Number(msg.test_delay.time) || 0;
-        const lastDelay = Number(msg.test_delay.last_delay) || 0;
-        this.sendMessage({ test_delay: { time: echoTime, from_client: true, last_delay: lastDelay } });
       } else {
         const fields = Object.keys(msg).filter(k => msg[k] !== null && msg[k] !== undefined && msg[k] !== false && msg[k] !== 0 && msg[k] !== '');
         if (fields.length) console.log('[session] Unhandled message fields:', fields);
@@ -161,7 +163,7 @@ export class Session {
           image_quality: 3,  // Balanced (Low=2, Balanced=3, Best=4)
           custom_fps: 30,    // request 30 FPS from host
         },
-        video_ack_required: true,
+        video_ack_required: false,
         session_id: Math.floor(Math.random() * 0xFFFFFFFF),
         version: '1.3.8',
       },
@@ -198,13 +200,14 @@ export class Session {
       codec: 'h264',
     });
 
-    // Tell host we're ready to receive video at full rate.
-    // Without this the host may throttle heavily waiting for a readiness signal.
+    // Tell host we're ready to receive video.
     this.sendMessage({ misc: { video_received: true } });
 
-    // Post-login option update: some hosts only apply custom_fps from a Misc option
-    // message after login, not from the LoginRequest option field.
-    // Use Low quality (2) to maximise encode speed and frame rate.
+    // Request a fresh keyframe to kick-start the video stream.
+    this.sendMessage({ misc: { refresh_video: true } });
+
+    // Post-login option update with custom_fps.
+    // The native client sends this periodically via fps_control().
     this.sendMessage({
       misc: {
         option: {
@@ -214,31 +217,7 @@ export class Session {
       },
     });
 
-    // Request FPS via multiple mechanisms — different host versions honour different fields.
-    this.sendMessage({ misc: { auto_adjust_fps: 30 } });
-    // full_speed_fps is deprecated but still honoured by some older host builds.
-    this.sendMessage({ misc: { full_speed_fps: 30 } });
-
-    // In RustDesk 1.3+, the client must explicitly request which display to capture.
-    this.sendMessage({ misc: { capture_displays: { set: [0] } } });
-
-    // Tell the host which encodings we support so it picks the best hardware encoder.
-    // Without this, the host may use a slow software fallback.
-    this.sendMessage({
-      misc: {
-        supported_encoding: {
-          h264: true,
-          h265: true,
-          vp8: true,
-          av1: false,
-        },
-      },
-    });
-
-    // Request a fresh keyframe to kick-start the video stream.
-    this.sendMessage({ misc: { refresh_video: true } });
-
-    console.log('[session] Sent video_received + option + auto_adjust_fps + full_speed_fps + capture_displays + supported_encoding + refresh_video');
+    console.log('[session] Sent video_received + refresh_video + option(fps=30)');
   }
 
   private handleMisc(misc: any): void {
@@ -363,10 +342,6 @@ export class Session {
         this.options.browserWs.send(packet);
       }
     }
-
-    // Ack every received frame so the host's ack-driven capture loop runs at full speed.
-    this.sendMessage({ misc: { video_received: true } });
-    this.acksSent++;
   }
 
   // Send a protobuf Message to the remote peer (encrypted if key is available)
