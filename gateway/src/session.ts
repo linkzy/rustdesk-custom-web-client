@@ -102,8 +102,11 @@ export class Session {
       } else if (msg.misc) {
         this.handleMisc(msg.misc);
       } else if (msg.test_delay) {
-        // Echo time back so host can measure RTT and adjust quality accordingly.
-        // Also include last_delay (our observed RTT in ms) to help host's adaptive algorithm.
+        // Log test_delay from host to understand its adaptive quality state
+        if (!msg.test_delay.from_client) {
+          const tb = Number(msg.test_delay.target_bitrate) || 0;
+          if (tb) console.log(`[session] test_delay from host: target_bitrate=${tb}`);
+        }
         const echoTime = Number(msg.test_delay.time) || 0;
         const lastDelay = Number(msg.test_delay.last_delay) || 0;
         this.sendMessage({ test_delay: { time: echoTime, from_client: true, last_delay: lastDelay } });
@@ -206,15 +209,15 @@ export class Session {
       },
     });
 
-    // Also request auto FPS adjustment — the host may use this signal to ramp up
-    // its capture rate rather than the option field.
+    // Request FPS via multiple mechanisms — different host versions honour different fields.
     this.sendMessage({ misc: { auto_adjust_fps: 30 } });
+    // full_speed_fps is deprecated but still honoured by some older host builds.
+    this.sendMessage({ misc: { full_speed_fps: 30 } });
 
     // In RustDesk 1.3+, the client must explicitly request which display to capture.
-    // Without this, some versions stay in a low-rate "standby" mode.
     this.sendMessage({ misc: { capture_displays: { set: [0] } } });
 
-    console.log('[session] Sent video_received + option (fps=30) + auto_adjust_fps + capture_displays');
+    console.log('[session] Sent video_received + option (fps=30) + auto_adjust_fps + full_speed_fps + capture_displays');
   }
 
   private handleMisc(misc: any): void {
