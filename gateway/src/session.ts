@@ -99,6 +99,8 @@ export class Session {
         this.handleVideoFrame(msg.video_frame);
       } else if (msg.peer_info) {
         this.handlePeerInfo(msg.peer_info);
+      } else if (msg.misc) {
+        this.handleMisc(msg.misc);
       } else if (msg.test_delay) {
         const echoTime = Number(msg.test_delay.time) || 0;
         this.sendMessage({ test_delay: { time: echoTime, from_client: true } });
@@ -200,7 +202,33 @@ export class Session {
         },
       },
     });
-    console.log('[session] Sent video_received + post-login option (fps=30, quality=Low)');
+
+    // Also request auto FPS adjustment — the host may use this signal to ramp up
+    // its capture rate rather than the option field.
+    this.sendMessage({ misc: { auto_adjust_fps: 30 } });
+    console.log('[session] Sent video_received + option (fps=30) + auto_adjust_fps=30');
+  }
+
+  private handleMisc(misc: any): void {
+    // Log all non-default fields so we can see what the host is telling us
+    const active = Object.entries(misc)
+      .filter(([, v]) => v !== null && v !== undefined && v !== false && v !== 0 && v !== '')
+      .map(([k, v]) => `${k}=${JSON.stringify(v)}`);
+    if (active.length) {
+      console.log('[session] Misc from host:', active.join(', '));
+      this.sendBrowserJson({ type: 'log', message: `host misc: ${active.join(', ')}` });
+    }
+
+    // If the host tells us its current FPS target, surface it
+    if (misc.auto_adjust_fps !== undefined && misc.auto_adjust_fps !== 0) {
+      console.log(`[session] Host auto_adjust_fps = ${misc.auto_adjust_fps}`);
+    }
+
+    // Host closed the session
+    if (misc.close_reason) {
+      console.warn('[session] Host closed session:', misc.close_reason);
+      this.sendBrowserJson({ type: 'error', message: `Host closed: ${misc.close_reason}` });
+    }
   }
 
   private handleSignedId(signedId: { id?: any }): void {
