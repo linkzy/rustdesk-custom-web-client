@@ -146,7 +146,7 @@ export class Session {
             prefer: 2,  // H264
           },
         },
-        video_ack_required: true,
+        video_ack_required: false,
         session_id: Math.floor(Math.random() * 0xFFFFFFFF),
         version: '1.2.4',
       },
