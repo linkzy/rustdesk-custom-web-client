@@ -346,6 +346,7 @@ export class Session {
     // Ack every received frame so the host's ack-driven capture loop runs at full speed.
     // This is the key to achieving 30 FPS — the host sends next frame only after ack arrives.
     this.sendMessage({ misc: { video_received: true } });
+  }
 
   // Send a protobuf Message to the remote peer (encrypted if key is available)
   sendMessage(payload: Record<string, unknown>): void {
