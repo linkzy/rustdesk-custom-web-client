@@ -13,7 +13,7 @@ export async function performRendezvous(targetId: string, attempt = 1): Promise<
   const hbbsPort = process.env.HBBS_WS_PORT ?? '21118';
   const url = `ws://${hbbsHost}:${hbbsPort}`;
   const serverKey = (process.env.SERVER_KEY ?? '').trim();
-  const MAX_ATTEMPTS = 6;  // increased from 3 — host may take up to ~10s to re-register after restart
+  const MAX_ATTEMPTS = 3;
 
   const root = await loadProtos();
 
@@ -21,8 +21,8 @@ export async function performRendezvous(targetId: string, attempt = 1): Promise<
     const ws = new WebSocket(url);
     const timeout = setTimeout(() => {
       ws.close();
-      reject(new Error('[rendezvous] Timeout waiting for hbbs response'));
-    }, 25000);  // increased from 15s
+      reject(new Error('[rendezvous] Timeout'));
+    }, 15000);
 
     let resolved = false;
 
@@ -122,10 +122,10 @@ export async function performRendezvous(targetId: string, attempt = 1): Promise<
             clearTimeout(timeout);
             ws.close();
             if (resp.failure === 'OFFLINE' && attempt < MAX_ATTEMPTS) {
-              console.log(`[rendezvous] Peer OFFLINE (attempt ${attempt}/${MAX_ATTEMPTS}), retrying in 3s...`);
+              console.log(`[rendezvous] Peer OFFLINE (attempt ${attempt}/${MAX_ATTEMPTS}), retrying in 2s...`);
               setTimeout(() => {
                 performRendezvous(targetId, attempt + 1).then(resolve).catch(reject);
-              }, 3000);  // increased from 2s — give host more time to reconnect
+              }, 2000);
             } else {
               const hint = resp.failure === 'OFFLINE'
                 ? 'OFFLINE — make sure the RustDesk app is running and connected to your server'
