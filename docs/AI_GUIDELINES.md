@@ -99,9 +99,21 @@ The gateway connects to `hbbs`/`hbbr` exclusively via WebSocket (ports 21118/211
 | `SERVER_KEY` | RustDesk server public key (base64) | `<from hbbs logs>` |
 | `GATEWAY_PORT` | Port gateway listens on for browser WS | `4000` |
 
----
+## Project Status (as of v0.1.0)
 
-## Testing a Task
+The project is **working and deployed**. All 22 original development tasks are complete. The client successfully connects to a self-hosted RustDesk relay, streams H264 video at 3–16 FPS, and forwards keyboard/mouse input with near-zero latency.
+
+**Current known bugs** (open, fix pending):
+- KI-004 — Mouse scroll wheel direction inverted
+- KI-005 — Keyboard layout / Caps Lock mismatch
+
+**Active deployment:**
+- Relay: Oracle Cloud VPS, São Paulo (137.131.214.48)
+- Client: `https://rclient.linkzy.dev` (Cloudflare Tunnel)
+- Gateway: `rclient-gateway` Docker container on same VPS
+- Two compose files: `docker-compose.infra.yml` (hbbs+hbbr) and `docker-compose.app.yml` (gateway+web)
+
+---
 
 When completing a task, verify it by running the relevant unit test or manually tracing the logic. For protocol tasks, log the raw bytes and compare to expected protobuf structure. Do not mark a task done without evidence it works.
 
@@ -134,4 +146,15 @@ When completing a task, verify it by running the relevant unit test or manually 
 
 10. **protobufjs int64/uint64 re-encoding**: `toObject({ longs: String })` returns int64 fields as JavaScript strings. If you decode a message and re-encode it (e.g. to echo it back), convert the value with `Number(value)` first. Passing a string to `verify()`/`encode()` throws `"integer|Long expected"`, which gets caught by the outer try/catch and silently drops the message.
 
-11. **TestDelay keepalive (IMPORTANT)**: The peer sends `Message { test_delay: { time, from_client: false } }` every few seconds. You MUST echo: `Message { test_delay: { time: Number(msg.test_delay.time), from_client: true } }`. Silence → peer closes connection with code 1006 after ~10 seconds. See KI-001 in KNOWN_ISSUES.md.
+11. **TestDelay keepalive (CRITICAL — easy to get wrong)**: The peer sends `Message { test_delay: { time, from_client: false } }` every second. You MUST echo it back with `from_client: false` (NOT true). The host checks `if t.from_client` — if true, it treats it as a client-initiated ping and just echoes it back silently. If false, it processes it as a delay measurement response, feeds `VIDEO_QOS.user_network_delay(rtt)`, which ramps up FPS when RTT < 50ms. Sending `from_client: true` means the host never processes RTT → FPS stays at minimum (~2 FPS). Also: echo only when `msg.test_delay.from_client === false` (don't echo echoes). Code:
+    ```typescript
+    if (!msg.test_delay.from_client) {
+      const echoTime = Number(msg.test_delay.time) || 0;
+      this.sendMessage({ test_delay: { time: echoTime, from_client: false, last_delay: 0 } });
+    }
+    ```
+
+12. **`video_ack_required` must be `false`**: Native RustDesk clients always send `video_ack_required: false` in `LoginRequest`. With `false`, the host acks the video frame internally *before* sending it, so the capture loop never blocks → 30 FPS. With `true`, the host waits up to 3 seconds for `Misc { video_received: true }` after each frame → 2 FPS max. Always set `video_ack_required: false`.
+
+13. **`SupportedDecoding` direction**: The CLIENT sends `SupportedDecoding` (what it can decode) inside `LoginRequest.option.supported_decoding`. The HOST sends `SupportedEncoding` (what it can encode) inside `PeerInfo.encoding`. These are opposite directions. Never send `Misc { supported_encoding: ... }` from the client — that field is host→client only.
+

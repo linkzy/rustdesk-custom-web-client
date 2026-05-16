@@ -182,15 +182,34 @@ Browser          Gateway          hbbs (21118)        hbbr (21119)        Remote
 
 ## Deployment
 
-```
-docker-compose up
+The project uses **two separate compose files** on the VPS:
+
+```bash
+# Infrastructure (hbbs + hbbr) — rarely redeployed
+docker compose -f docker-compose.infra.yml up -d
+
+# Application (gateway + web) — redeployed on code changes
+docker compose -f docker-compose.app.yml up -d
 ```
 
-Services:
-- `gateway` — Node.js container, port 4000 (internal only)
-- `web` — nginx container, port 80/443 (public), proxies `/ws` to gateway
+Services in `docker-compose.app.yml`:
+- `gateway` — Node.js container, port 4000 (internal, on `rustdesk-net` bridge)
+- `web` — nginx container, port 80 (internal, proxies `/ws` to gateway)
 
-Recommended: Put nginx reverse proxy with TLS (Let's Encrypt) in front of the `web` service.
+**Public access via Cloudflare Tunnel** (no open ports required):
+- `rclient.linkzy.dev` → web container (HTTP port 80)
+- `rclient-gw.linkzy.dev` → gateway container (WS port 4000)
+- Tunnel config lives on the VPS as a Docker container (`cloudflared`)
+
+**CI/CD:** GitHub Actions builds `linux/amd64` + `linux/arm64` images on every push to `main` and pushes to `ghcr.io/linkzy/rclient-gateway:latest` and `ghcr.io/linkzy/rclient-web:latest`.
+
+**To deploy a new version:**
+```bash
+ssh ubuntu@137.131.214.48
+cd /home/ubuntu/rustdesk
+docker compose -f docker-compose.app.yml pull
+docker compose -f docker-compose.app.yml up -d --no-deps --force-recreate gateway web
+```
 
 ---
 
