@@ -123,11 +123,13 @@ rclient.yourdomain.com {
 
 ## Limitations
 
-- **Session drops after ~10 seconds** — Known issue (KI-001). The keepalive (`TestDelay`) echo is not yet implemented. Reconnecting restores the session. See `docs/KNOWN_ISSUES.md`.
+- **Session drops after ~10 seconds** — Known issue (KI-001). ✅ Fixed.
 - **Relay-only**: The web client always connects via your relay server (no direct P2P connection). This means latency depends on your relay server location.
 - **Single monitor**: Currently connects to the primary display only.
 - **No file transfer**: Remote control only (keyboard + mouse + screen).
 - **No audio**: Not yet implemented.
+- **Keyboard layout / Caps Lock bug** — KI-005. Characters may appear shifted or wrong on the remote machine due to key event translation issues.
+- **Mouse scroll direction inverted** — KI-004. Scroll up/down is reversed on the remote.
 
 ---
 

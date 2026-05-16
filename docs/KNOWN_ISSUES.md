@@ -120,4 +120,29 @@ If the host is Linux/macOS the logic may differ — test on both targets.
 
 ---
 
-*Last updated: 2026-05-14*
+## KI-005 — Keyboard Input: Apparent Caps Lock and Language Mismatch
+
+**Status:** Open  
+**Severity:** Medium — text input is unreliable, wrong characters appear  
+**Affected component:** `gateway/src/session.ts`, `web/src/components/RemoteScreen.tsx`
+
+### Symptoms
+- Characters typed in the web client appear as their **shifted/caps** equivalents on the remote machine (e.g. typing `a` produces `A`)
+- Special characters and symbols don't match the key pressed — suggests keyboard layout mismatch
+- Appears as if Caps Lock is permanently on from the remote machine's perspective
+- The remote machine's own Caps Lock state has no effect on the behaviour
+
+### Likely Root Cause
+The key event translation layer in the gateway maps browser `KeyboardEvent` properties to RustDesk's `KeyEvent` protobuf incorrectly. Two likely sub-causes:
+
+1. **Modifier state bleeding** — Shift or Caps Lock modifiers may be included in the `modifiers` array when they should not be, or not cleared after key-up events
+2. **`chr` vs `control_key` selection** — The gateway may be sending `chr` (Unicode codepoint) with the wrong casing, or using uppercase `keyCode` values instead of the raw character code
+
+### Next Steps
+- Audit the key event handler in `RemoteScreen.tsx` and the gateway's key translation
+- Log the exact `chr` and `modifiers` values sent to the host alongside what the user actually typed
+- Compare with RustDesk's native `KeyEvent` serialisation for the same keystrokes
+
+---
+
+*Last updated: 2026-05-15*
