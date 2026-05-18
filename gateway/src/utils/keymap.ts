@@ -104,6 +104,10 @@ export function buildKeyPayload(msg: {
   // Previously we used `chr` (position/scancode field) with keyCode (always the
   // uppercase VK value 65–90 for letters), which caused everything to come out
   // uppercase and broke non-US keyboard layouts.
+  //
+  // NOTE: The host fires a character insertion on BOTH down and up for unicode
+  // events — only send on keydown to avoid double-typing.
+  if (!msg.down) return null;
   return {
     key_event: {
       down: msg.down,
