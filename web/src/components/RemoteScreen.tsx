@@ -107,8 +107,9 @@ export function RemoteScreen({ state, controls, onLog }: RemoteScreenProps) {
 
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
-      // For wheel events x/y are scroll deltas; positive y = scroll down
-      const scrollY = e.deltaY > 0 ? 1 : -1;
+      // Browser deltaY: positive = scroll down. RustDesk y: positive = scroll up
+      // (Windows MOUSEEVENTF_WHEEL convention). Invert to match.
+      const scrollY = e.deltaY > 0 ? -1 : 1;
       controlsRef.current.sendMouse(0, scrollY, MOUSE_TYPE_WHEEL, getMods(e));
     };
 
