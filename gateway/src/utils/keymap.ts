@@ -49,6 +49,7 @@ export interface KeyPayload extends Record<string, unknown> {
     down?: boolean;
     control_key?: number;
     chr?: number;
+    unicode?: number;
     modifiers: number[];
     mode: number; // 0 = Legacy
   };
@@ -59,7 +60,7 @@ export function buildKeyPayload(msg: {
   key: string;
   keyCode: number;
   modifiers?: string[];
-}): KeyPayload {
+}): KeyPayload | null {
   const modifiers = (msg.modifiers ?? [])
     .map((m) => MODIFIER_MAP[m])
     .filter((v): v is number => v !== undefined);
@@ -72,20 +73,43 @@ export function buildKeyPayload(msg: {
         down: msg.down,
         control_key: controlKey,
         modifiers,
-        mode: 0, // Legacy
+        mode: 0,
       },
     };
   }
 
-  // Regular printable key → use chr with browser keyCode.
-  // Browser keyCode matches Windows Virtual Key codes for letters (A=65) and
-  // digits (0=48). The host OS applies shift/caps to produce the final character.
+  // Skip non-printable keys (Dead, Process, Unidentified, etc.)
+  if (msg.key.length !== 1) return null;
+
+  // For Ctrl/Alt keyboard shortcuts (e.g. Ctrl+C, Alt+F4), send chr with the
+  // browser keyCode which maps to Windows VK codes (C=67, V=86, etc.).
+  // This lets the host fire the correct shortcut action.
+  const isShortcut = modifiers.some(
+    (m) => m === MODIFIER_MAP['ctrl'] || m === MODIFIER_MAP['alt'],
+  );
+  if (isShortcut) {
+    return {
+      key_event: {
+        down: msg.down,
+        chr: msg.keyCode,
+        modifiers,
+        mode: 0,
+      },
+    };
+  }
+
+  // Regular printable character → send the actual Unicode code point via the
+  // `unicode` field (proto field 5). This is correct for ALL layouts and cases:
+  //   'a' → unicode=97,  'A' → unicode=65,  '@' → unicode=64
+  // Previously we used `chr` (position/scancode field) with keyCode (always the
+  // uppercase VK value 65–90 for letters), which caused everything to come out
+  // uppercase and broke non-US keyboard layouts.
   return {
     key_event: {
       down: msg.down,
-      chr: msg.keyCode,
+      unicode: msg.key.charCodeAt(0),
       modifiers,
-      mode: 0, // Legacy
+      mode: 0,
     },
   };
 }

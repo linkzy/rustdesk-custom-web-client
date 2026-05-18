@@ -68,12 +68,13 @@ wss.on('connection', (ws: WebSocket) => {
       } else if (msg.type === 'key') {
         if (!session) { sendLog('key: no session'); return; }
         try {
-          const payload = buildKeyPayload({
+        const payload = buildKeyPayload({
             down: msg.down ?? true,
             key: msg.key ?? '',
             keyCode: msg.keyCode ?? 0,
             modifiers: msg.modifiers ?? [],
           });
+          if (!payload) return; // Dead / Unidentified / unsupported key — skip
           sendLog(`key down=${msg.down} key="${msg.key}" → ${JSON.stringify(payload.key_event)}`);
           session.sendMessage(payload);
         } catch (e: any) {
