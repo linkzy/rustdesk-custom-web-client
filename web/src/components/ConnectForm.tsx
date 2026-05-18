@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import styles from './ConnectForm.module.css';
 
+const LS_ID_KEY  = 'rclient_target_id';
+const LS_PW_KEY  = 'rclient_password';
+
 interface ConnectFormProps {
   onConnect: (targetId: string, password: string) => void;
   onDisconnect: () => void;
@@ -9,8 +12,18 @@ interface ConnectFormProps {
 }
 
 export function ConnectForm({ onConnect, onDisconnect, status, error }: ConnectFormProps) {
-  const [targetId, setTargetId] = useState('');
-  const [password, setPassword] = useState('');
+  const [targetId, setTargetId] = useState(() => localStorage.getItem(LS_ID_KEY) ?? '');
+  const [password, setPassword] = useState(() => localStorage.getItem(LS_PW_KEY) ?? '');
+
+  const handleIdChange = (v: string) => {
+    setTargetId(v);
+    localStorage.setItem(LS_ID_KEY, v);
+  };
+
+  const handlePasswordChange = (v: string) => {
+    setPassword(v);
+    localStorage.setItem(LS_PW_KEY, v);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,7 +52,7 @@ export function ConnectForm({ onConnect, onDisconnect, status, error }: ConnectF
               type="text"
               placeholder="Enter RustDesk ID"
               value={targetId}
-              onChange={(e) => setTargetId(e.target.value)}
+              onChange={(e) => handleIdChange(e.target.value)}
               disabled={isConnecting}
               autoFocus
             />
@@ -51,7 +64,7 @@ export function ConnectForm({ onConnect, onDisconnect, status, error }: ConnectF
               type="password"
               placeholder="Connection password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => handlePasswordChange(e.target.value)}
               disabled={isConnecting}
             />
           </div>
