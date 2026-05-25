@@ -22,31 +22,31 @@ All 22 original tasks are done. See git history for implementation details.
 
 ---
 
-## Known Issues (Open)
+## Known Issues (Resolved in v0.1.1) ✅
 
-See `docs/KNOWN_ISSUES.md` for full root cause analysis.
-
-| ID | Summary | Priority |
-|---|---|---|
-| KI-004 | Mouse scroll wheel direction inverted | Low |
-| KI-005 | Keyboard layout / Caps Lock mismatch — wrong characters sent to host | Medium |
+| ID | Summary |
+|---|---|
+| KI-004 | Mouse scroll wheel direction inverted — **fixed** |
+| KI-005 | Keyboard layout / Caps Lock mismatch — **fixed** |
 
 ---
 
 ## Roadmap (Not Yet Started)
 
-| ID | Feature | Notes |
-|---|---|---|
-| R-01 | Fix KI-005 — keyboard layout/caps mismatch | Audit key event translation in `RemoteScreen.tsx` + gateway |
-| R-02 | Fix KI-004 — scroll wheel inverted | One-line fix in `RemoteScreen.tsx` |
-| R-03 | Browser-level authentication | Login page protecting the rclient UI from unauthorized use |
-| R-04 | Audio streaming | Receive `AudioFrame` messages, decode and play via Web Audio API |
-| R-05 | Clipboard sync | Send/receive `Clipboard` messages for paste-into-remote support |
-| R-06 | Multi-monitor | Handle `SwitchDisplay` and `CaptureDisplays` messages |
-| R-07 | Mobile touch input | Map touch events to mouse events for phone/tablet use |
-| R-08 | File transfer | Implement `FileAction`/`FileResponse` protocol messages |
-| R-09 | Further FPS improvement | Currently 3–16 FPS; investigate reaching native app's 30 FPS |
-| R-10 | Session reconnect | Auto-reconnect after network drop without re-entering credentials |
+| ID | Priority | Feature | Notes |
+|---|---|---|---|
+| R-03 | 🔴 High | User-configurable server (Advanced Options) | Collapsible "Advanced" section in login form; fields for hbbs host, hbbr host, and server public key — override the gateway `.env` defaults. If left blank, gateway uses its own `.env`. Enables any user to point the deployed client at their own relay server. |
+| R-04 | 🔴 High | CAPTCHA on connect | `.env` flag `CAPTCHA_ENABLED=false` (default). When enabled, add hCaptcha (free tier) to the login form before allowing a connection attempt. Prevents relay brute-force by public users. Gateway must verify the CAPTCHA token server-side before forwarding the connect request. |
+| R-05 | 🔴 High | Full screen mode | Button in toolbar to enter browser Fullscreen API (`element.requestFullscreen()`). Canvas should fill the entire screen. Exit on Escape or button press. |
+| R-06 | 🔴 High | Canvas scaling / fit-to-window | Toggle in toolbar: "Fit" mode stretches the canvas to fill available viewport (CSS `object-fit: contain`), vs "1:1" mode shows the remote at native resolution with scrollbars. Important when host resolution doesn't match client viewport. |
+| R-07 | 🟡 Medium | Saved connections | Store multiple named connections in localStorage (ID + password + optional label). Dropdown or list on the login screen to quickly pick a saved connection. |
+| R-08 | 🟡 Medium | Session auto-reconnect | Detect WebSocket drop and automatically retry connection (with exponential backoff) without user needing to re-enter credentials. |
+| R-09 | 🟡 Medium | Audio streaming | Receive `AudioFrame` messages from host, decode and play via Web Audio API. |
+| R-10 | 🟡 Medium | Clipboard sync | Send/receive `Clipboard` messages so text can be pasted into the remote session and copied back. |
+| R-11 | 🟢 Low | Further FPS improvement | Currently 3–16 FPS; investigate reaching native app's 30 FPS consistently. |
+| R-12 | 🟢 Low | Multi-monitor support | Handle `SwitchDisplay` and `CaptureDisplays` messages; add monitor selector in toolbar. |
+| R-13 | 🟢 Low | Mobile touch input | Map touch events to mouse events for phone/tablet use. |
+| R-14 | 🟢 Low | File transfer | Implement `FileAction`/`FileResponse` protocol messages. |
 
 ---
 
