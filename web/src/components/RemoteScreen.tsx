@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { VideoFrameDecoder } from '../video/decoder';
 import type { GatewayControls, GatewayState } from '../hooks/useGateway';
 import styles from './RemoteScreen.module.css';
@@ -22,6 +22,45 @@ export function RemoteScreen({ state, controls, onLog, fitToWindow = true }: Rem
   stateRef.current = state;
   const onLogRef = useRef(onLog);
   onLogRef.current = onLog;
+
+  // Fit mode: compute actual display size so the canvas CSS box matches the
+  // rendered image exactly — getBoundingClientRect() then returns true coords.
+  const [displaySize, setDisplaySize] = useState<{ w: number; h: number } | null>(null);
+  const fitToWindowRef = useRef(fitToWindow);
+  fitToWindowRef.current = fitToWindow;
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const calc = () => {
+      if (!fitToWindowRef.current) { setDisplaySize(null); return; }
+      const cw = container.clientWidth;
+      const ch = container.clientHeight;
+      const nw = stateRef.current.remoteWidth || 1920;
+      const nh = stateRef.current.remoteHeight || 1080;
+      const scale = Math.min(cw / nw, ch / nh);
+      setDisplaySize({ w: Math.round(nw * scale), h: Math.round(nh * scale) });
+    };
+
+    calc();
+    const obs = new ResizeObserver(calc);
+    obs.observe(container);
+    return () => obs.disconnect();
+  }, []);
+
+  // Recalc when remote resolution or fit mode changes
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    if (!fitToWindow) { setDisplaySize(null); return; }
+    const cw = container.clientWidth;
+    const ch = container.clientHeight;
+    const nw = state.remoteWidth || 1920;
+    const nh = state.remoteHeight || 1080;
+    const scale = Math.min(cw / nw, ch / nh);
+    setDisplaySize({ w: Math.round(nw * scale), h: Math.round(nh * scale) });
+  }, [state.remoteWidth, state.remoteHeight, fitToWindow]);
 
   const log = (msg: string) => {
     console.log('[input]', msg);
@@ -151,6 +190,9 @@ export function RemoteScreen({ state, controls, onLog, fitToWindow = true }: Rem
         className={fitToWindow ? styles.canvasFit : styles.canvasNative}
         width={state.remoteWidth || 1920}
         height={state.remoteHeight || 1080}
+        style={fitToWindow && displaySize
+          ? { width: displaySize.w, height: displaySize.h }
+          : undefined}
       />
     </div>
   );

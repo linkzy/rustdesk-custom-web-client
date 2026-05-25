@@ -1,4 +1,4 @@
-/* Fit mode: fill available space, letterbox if needed */
+/* Fit mode: canvas is centered; JS sets its exact display size via inline style */
 .containerFit {
   width: 100%;
   height: 100%;
@@ -10,10 +10,6 @@
 }
 
 .canvasFit {
-  /* Fill container while keeping aspect ratio */
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
   display: block;
   cursor: crosshair;
 }
