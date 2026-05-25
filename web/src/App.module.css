@@ -42,7 +42,42 @@
   background: #dc2626;
 }
 
-.screen {
+.toolbarBtn {
+  padding: 0.3rem 0.8rem;
+  background: #334155;
+  border: 1px solid #475569;
+  border-radius: 6px;
+  color: #cbd5e1;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.toolbarBtn:hover {
+  background: #475569;
+}
+
+.toolbarBtnActive {
+  background: #1d4ed8;
+  border-color: #3b82f6;
+  color: #fff;
+}
+
+.toolbarBtnActive:hover {
+  background: #2563eb;
+}
+
+/* Fit: canvas scales to fill viewport */
+.screenFit {
   flex: 1;
   overflow: hidden;
+  display: flex;
+}
+
+/* Native 1:1: scrollbars appear when remote > viewport */
+.screenNative {
+  flex: 1;
+  overflow: auto;
+  display: flex;
+  background: #000;
 }

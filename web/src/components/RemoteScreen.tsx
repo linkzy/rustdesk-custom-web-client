@@ -7,9 +7,10 @@ interface RemoteScreenProps {
   state: GatewayState;
   controls: GatewayControls;
   onLog?: (msg: string) => void;
+  fitToWindow?: boolean;
 }
 
-export function RemoteScreen({ state, controls, onLog }: RemoteScreenProps) {
+export function RemoteScreen({ state, controls, onLog, fitToWindow = true }: RemoteScreenProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const decoderRef = useRef<VideoFrameDecoder | null>(null);
@@ -144,10 +145,10 @@ export function RemoteScreen({ state, controls, onLog }: RemoteScreenProps) {
   }, []); // empty deps — refs provide latest values without re-running
 
   return (
-    <div ref={containerRef} className={styles.container}>
+    <div ref={containerRef} className={fitToWindow ? styles.containerFit : styles.containerNative}>
       <canvas
         ref={canvasRef}
-        className={styles.canvas}
+        className={fitToWindow ? styles.canvasFit : styles.canvasNative}
         width={state.remoteWidth || 1920}
         height={state.remoteHeight || 1080}
       />

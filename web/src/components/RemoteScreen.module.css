@@ -1,4 +1,5 @@
-.container {
+/* Fit mode: fill available space, letterbox if needed */
+.containerFit {
   width: 100%;
   height: 100%;
   display: flex;
@@ -6,13 +7,26 @@
   justify-content: center;
   background: #000;
   outline: none;
-  overflow: hidden;
 }
 
-.canvas {
-  max-width: 100%;
-  max-height: 100%;
+.canvasFit {
+  /* Fill container while keeping aspect ratio */
+  width: 100%;
+  height: 100%;
   object-fit: contain;
+  display: block;
+  cursor: crosshair;
+}
+
+/* Native 1:1 mode: no scaling, scrollbars handled by parent */
+.containerNative {
+  display: inline-block;
+  background: #000;
+  outline: none;
+  line-height: 0;
+}
+
+.canvasNative {
   display: block;
   cursor: crosshair;
 }
