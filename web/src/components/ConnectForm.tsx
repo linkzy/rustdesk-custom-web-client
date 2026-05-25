@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import styles from './ConnectForm.module.css';
 
 const LS_ID_KEY      = 'rclient_target_id';
@@ -10,12 +10,30 @@ const LS_ADV_KEY     = 'rclient_advanced_open';
 
 export interface ServerConfig {
   hbbsHost?: string;
+  hbbsPort?: string;
   hbbrHost?: string;
+  hbbrPort?: string;
   serverKey?: string;
 }
 
+interface GatewayConfig {
+  captchaEnabled: boolean;
+  hcaptchaSiteKey: string;
+}
+
+// Augment window for hCaptcha
+declare global {
+  interface Window {
+    hcaptcha?: {
+      render: (id: string, opts: { sitekey: string; callback: (t: string) => void; 'expired-callback': () => void }) => void;
+      reset: (id?: string) => void;
+    };
+    onHcaptchaLoad?: () => void;
+  }
+}
+
 interface ConnectFormProps {
-  onConnect: (targetId: string, password: string, serverConfig?: ServerConfig) => void;
+  onConnect: (targetId: string, password: string, serverConfig?: ServerConfig, captchaToken?: string) => void;
   onDisconnect: () => void;
   status: 'idle' | 'connecting' | 'connected' | 'error' | 'disconnected';
   error: string | null;
@@ -29,7 +47,51 @@ export function ConnectForm({ onConnect, onDisconnect, status, error }: ConnectF
   const [serverKey, setServerKey] = useState(() => localStorage.getItem(LS_SRVKEY_KEY) ?? '');
   const [advOpen, setAdvOpen]     = useState(() => localStorage.getItem(LS_ADV_KEY) === 'true');
 
+  const [gwConfig, setGwConfig]       = useState<GatewayConfig | null>(null);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const captchaRendered = useRef(false);
+
   const save = (key: string, val: string) => localStorage.setItem(key, val);
+
+  // Fetch gateway config (captcha settings) on mount
+  useEffect(() => {
+    fetch('/config')
+      .then((r) => r.json())
+      .then((cfg: GatewayConfig) => setGwConfig(cfg))
+      .catch(() => setGwConfig({ captchaEnabled: false, hcaptchaSiteKey: '' }));
+  }, []);
+
+  // Load hCaptcha script and render widget once config is known
+  useEffect(() => {
+    if (!gwConfig?.captchaEnabled || !gwConfig.hcaptchaSiteKey || captchaRendered.current) return;
+    captchaRendered.current = true;
+
+    const render = () => {
+      window.hcaptcha?.render('hcaptcha-widget', {
+        sitekey: gwConfig.hcaptchaSiteKey,
+        callback: (token: string) => setCaptchaToken(token),
+        'expired-callback': () => setCaptchaToken(null),
+      });
+    };
+
+    if (window.hcaptcha) {
+      render();
+    } else {
+      window.onHcaptchaLoad = render;
+      const script = document.createElement('script');
+      script.src = 'https://js.hcaptcha.com/1/api.js?onload=onHcaptchaLoad&render=explicit';
+      script.async = true;
+      document.head.appendChild(script);
+    }
+  }, [gwConfig]);
+
+  // Reset captcha after each connection attempt
+  useEffect(() => {
+    if ((status === 'error' || status === 'disconnected') && gwConfig?.captchaEnabled) {
+      window.hcaptcha?.reset();
+      setCaptchaToken(null);
+    }
+  }, [status, gwConfig]);
 
   const toggleAdv = () => {
     const next = !advOpen;
@@ -44,11 +106,18 @@ export function ConnectForm({ onConnect, onDisconnect, status, error }: ConnectF
     if (hbbsHost.trim())  cfg.hbbsHost  = hbbsHost.trim();
     if (hbbrHost.trim())  cfg.hbbrHost  = hbbrHost.trim();
     if (serverKey.trim()) cfg.serverKey = serverKey.trim();
-    onConnect(targetId.trim(), password, Object.keys(cfg).length ? cfg : undefined);
+    onConnect(
+      targetId.trim(),
+      password,
+      Object.keys(cfg).length ? cfg : undefined,
+      captchaToken ?? undefined,
+    );
   };
 
   const isConnected  = status === 'connected';
   const isConnecting = status === 'connecting';
+  const captchaRequired = gwConfig?.captchaEnabled && !captchaToken;
+  const connectDisabled = isConnecting || !targetId.trim() || !!captchaRequired;
 
   return (
     <div className={styles.container}>
@@ -129,10 +198,15 @@ export function ConnectForm({ onConnect, onDisconnect, status, error }: ConnectF
             </div>
           )}
 
+          {/* hCaptcha widget — only rendered when CAPTCHA_ENABLED=true on gateway */}
+          {gwConfig?.captchaEnabled && (
+            <div id="hcaptcha-widget" className={styles.captchaWidget} />
+          )}
+
           <button
             className={styles.button}
             type="submit"
-            disabled={isConnecting || !targetId.trim()}
+            disabled={connectDisabled}
           >
             {isConnecting ? (
               <><span className={styles.spinner} /> Connecting…</>

@@ -25,7 +25,7 @@ export interface GatewayState {
 }
 
 export interface GatewayControls {
-  connect: (targetId: string, password: string, serverConfig?: ServerConfig) => void;
+  connect: (targetId: string, password: string, serverConfig?: ServerConfig, captchaToken?: string) => void;
   disconnect: () => void;
   sendMouse: (x: number, y: number, mask: number, modifiers?: string[]) => void;
   sendKey: (down: boolean, key: string, keyCode: number, modifiers?: string[]) => void;
@@ -99,7 +99,7 @@ export function useGateway(): [GatewayState, GatewayControls] {
     }
   }, []);
 
-  const connect = useCallback((targetId: string, password: string, serverConfig?: ServerConfig) => {
+  const connect = useCallback((targetId: string, password: string, serverConfig?: ServerConfig, captchaToken?: string) => {
     if (wsRef.current) wsRef.current.close();
     stopPing();
 
@@ -112,7 +112,7 @@ export function useGateway(): [GatewayState, GatewayControls] {
 
     ws.onopen = () => {
       addLog('WS open, sending connect');
-      ws.send(JSON.stringify({ type: 'connect', targetId, password, serverConfig }));
+      ws.send(JSON.stringify({ type: 'connect', targetId, password, serverConfig, captchaToken }));
     };
 
     ws.onmessage = (event) => {

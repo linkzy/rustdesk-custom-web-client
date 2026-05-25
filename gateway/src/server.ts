@@ -1,3 +1,4 @@
+import http from 'http';
 import WebSocket, { WebSocketServer } from 'ws';
 import path from 'path';
 import * as dotenv from 'dotenv';
@@ -6,10 +7,49 @@ import { buildKeyPayload, MODIFIER_MAP } from './utils/keymap';
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
-const GATEWAY_PORT = parseInt(process.env.GATEWAY_PORT ?? '4000', 10);
-const wss = new WebSocketServer({ port: GATEWAY_PORT });
+const GATEWAY_PORT      = parseInt(process.env.GATEWAY_PORT ?? '4000', 10);
+const CAPTCHA_ENABLED   = process.env.CAPTCHA_ENABLED === 'true';
+const HCAPTCHA_SECRET   = process.env.HCAPTCHA_SECRET_KEY ?? '';
+const HCAPTCHA_SITE_KEY = process.env.HCAPTCHA_SITE_KEY ?? '';
 
-console.log(`[gateway] Listening on ws://0.0.0.0:${GATEWAY_PORT}`);
+// Verify an hCaptcha token against the hCaptcha API
+async function verifyCaptcha(token: string): Promise<boolean> {
+  try {
+    const body = new URLSearchParams({ secret: HCAPTCHA_SECRET, response: token });
+    const res = await fetch('https://api.hcaptcha.com/siteverify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: body.toString(),
+    });
+    const json = await res.json() as { success: boolean };
+    return json.success === true;
+  } catch (e) {
+    console.error('[gateway] hCaptcha verification error:', e);
+    return false;
+  }
+}
+
+// Shared HTTP server — handles both /config (HTTP) and /ws (WebSocket upgrade)
+const httpServer = http.createServer((req, res) => {
+  if (req.method === 'GET' && req.url === '/config') {
+    res.writeHead(200, {
+      'Content-Type': 'application/json',
+      'Access-Control-Allow-Origin': '*',
+    });
+    res.end(JSON.stringify({
+      captchaEnabled: CAPTCHA_ENABLED,
+      hcaptchaSiteKey: CAPTCHA_ENABLED ? HCAPTCHA_SITE_KEY : '',
+    }));
+    return;
+  }
+  res.writeHead(404);
+  res.end();
+});
+
+const wss = new WebSocketServer({ server: httpServer });
+httpServer.listen(GATEWAY_PORT, () => {
+  console.log(`[gateway] Listening on port ${GATEWAY_PORT} (captcha=${CAPTCHA_ENABLED})`);
+});
 
 wss.on('connection', (ws: WebSocket) => {
   console.log('[gateway] Browser connected');
@@ -32,6 +72,23 @@ wss.on('connection', (ws: WebSocket) => {
           ws.send(JSON.stringify({ type: 'pong', ts: msg.ts }));
         }
       } else if (msg.type === 'connect') {
+        // If captcha is enabled, verify token before allowing connection
+        if (CAPTCHA_ENABLED) {
+          const token = msg.captchaToken ?? '';
+          if (!token) {
+            if (ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify({ type: 'error', message: 'CAPTCHA required' }));
+            }
+            return;
+          }
+          const valid = await verifyCaptcha(token);
+          if (!valid) {
+            if (ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify({ type: 'error', message: 'CAPTCHA verification failed' }));
+            }
+            return;
+          }
+        }
         if (session) session.disconnect();
         session = new Session({
           targetId: msg.targetId,

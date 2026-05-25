@@ -29,7 +29,7 @@ function App() {
         </>
       ) : (
         <ConnectForm
-          onConnect={(id, pw, cfg) => controls.connect(id, pw, cfg)}
+          onConnect={(id, pw, cfg, token) => controls.connect(id, pw, cfg, token)}
           onDisconnect={controls.disconnect}
           status={state.status}
           error={state.error}
