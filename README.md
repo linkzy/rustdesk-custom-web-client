@@ -1,178 +1,387 @@
-# rclient — RustDesk Web Client
+# rclient — Browser-Based Remote Desktop for RustDesk
 
-A self-hosted web client for [RustDesk](https://rustdesk.com/) that lets you access your remote machines from any browser — no app installation required.
+**Access your computers from any browser — no app needed.**
 
-> **Designed to work with your own self-hosted RustDesk relay server.**
+rclient is an open-source web client for [RustDesk](https://rustdesk.com/) that works with your **self-hosted** RustDesk relay server. Type a machine ID and password in your browser and you're in — keyboard, mouse, and live video, all without installing anything.
+
+> 🌐 **Live demo:** [rclient.linkzy.dev](https://rclient.linkzy.dev)  
+> _(Demo connects to a real relay server in São Paulo, Brazil. You can test with your own RustDesk machine ID and password.)_
 
 ---
 
-## What Is This?
+## What Problem Does This Solve?
 
-If you run your own RustDesk relay server (`hbbs` + `hbbr`) on a VPS, this project gives you a browser-based client so you can connect to any of your managed machines without installing the RustDesk desktop app.
+RustDesk is a great open-source remote desktop tool, and running your own relay server gives you full control and low latency. But the native apps must be installed on every device you want to control *from*.
 
-```
-Browser → [rclient web UI] → [rclient gateway] → [your hbbs/hbbr] → Remote Machine
-```
+rclient fills that gap: once it's running on your VPS, you can connect to any of your machines from any browser — a friend's computer, a phone, a work machine where you can't install software.
 
 ---
 
 ## How It Works
 
-The project has two components:
+```
+Your Browser
+    │
+    │  HTTPS/WSS  (Cloudflare Tunnel or your reverse proxy)
+    ▼
+rclient Web UI  ──►  rclient Gateway
+(React + WebCodecs)   (Node.js)
+                           │
+                     RustDesk protocol
+                     (WebSocket, encrypted)
+                           │
+                    ┌──────▼──────┐
+                    │  Your VPS   │
+                    │  hbbs :21118│  ← rendezvous
+                    │  hbbr :21119│  ← relay
+                    └──────┬──────┘
+                           │
+                    Remote Machine
+                    (RustDesk host app)
+```
 
-| Component | What it does |
-|---|---|
-| **Gateway** (Node.js) | Speaks the RustDesk protocol on your behalf — connects to your relay server, handles authentication and encryption, and streams video to your browser |
-| **Web UI** (React) | Renders the remote screen in a `<canvas>` element using the browser's built-in video decoder (WebCodecs API). Captures your mouse and keyboard input and sends it back |
+- **Gateway** (Node.js) — speaks the RustDesk binary protocol, handles encryption, and bridges the browser to your relay server
+- **Web UI** (React) — renders the remote screen using the browser's built-in [WebCodecs API](https://developer.mozilla.org/en-US/docs/Web/API/WebCodecs_API), captures keyboard and mouse input
 
 ---
 
 ## Requirements
 
-- Docker and Docker Compose on your VPS
-- A running self-hosted RustDesk server (`hbbs` + `hbbr`)
-- Your RustDesk server's **public key** (printed in the hbbs logs on first run)
-- A modern browser (Chrome 94+, Edge 94+, Firefox 130+) for the WebCodecs API
+### On every machine you want to access remotely
+- [RustDesk](https://rustdesk.com/docs/en/client/windows-and-mac/) installed and running
+- Configured to use **your** relay server (see [Step 1](#step-1-set-up-rustdesk-on-the-host-machine))
 
----
+### To host rclient
+- A Linux VPS (1 GB RAM minimum — Oracle Cloud free tier works great)
+- Docker and Docker Compose installed
+- A domain name (or a free [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/) for HTTPS without a static IP)
 
-## Quick Start
-
-### 1. Clone the repository
-```bash
-git clone https://github.com/yourusername/rclient.git
-cd rclient
-```
-
-### 2. Configure environment
-```bash
-cp .env.example .env
-```
-
-Edit `.env`:
-```env
-HBBS_HOST=your-rustdesk-server.com
-HBBS_WS_PORT=21118
-HBBR_HOST=your-rustdesk-server.com
-HBBR_WS_PORT=21119
-SERVER_KEY=your-server-public-key-base64
-GATEWAY_PORT=4000
-```
-
-### 3. Start the services
-```bash
-docker compose up -d
-```
-
-The web UI will be available at `http://your-vps-ip` (or your domain if configured with TLS).
-
-### 4. Connect to a machine
-1. Open the web UI in your browser
-2. Enter the **RustDesk ID** of the machine you want to connect to
-3. Enter the **connection password** set on that machine
-4. Click **Connect**
-
----
-
-## Configuration
-
-### Environment Variables
-
-| Variable | Description | Default |
-|---|---|---|
-| `HBBS_HOST` | Your hbbs (rendezvous) server hostname | _required_ |
-| `HBBS_WS_PORT` | hbbs WebSocket port | `21118` |
-| `HBBR_HOST` | Your hbbr (relay) server hostname | _required_ |
-| `HBBR_WS_PORT` | hbbr WebSocket port | `21119` |
-| `SERVER_KEY` | Server public key (base64, from hbbs logs) | _required_ |
-| `GATEWAY_PORT` | Internal gateway port | `4000` |
-
-### Finding Your Server Key
-
-Run this on your VPS where hbbs is running:
-```bash
-docker logs hbbs 2>&1 | grep "Key:"
-```
-or check the `id_ed25519.pub` file in your hbbs data directory.
-
----
-
-## TLS / HTTPS (Recommended)
-
-Use a reverse proxy (nginx, Caddy, Traefik) with Let's Encrypt in front of the `web` container for HTTPS. The docker-compose file exposes port 80 by default.
-
-Example with Caddy:
-```
-rclient.yourdomain.com {
-  reverse_proxy localhost:80
-}
-```
-
----
-
-## Browser Compatibility
-
+### For connecting (browser requirements)
 | Browser | Support |
 |---|---|
-| Chrome / Edge 94+ | ✅ Full support |
-| Firefox 130+ | ✅ Full support |
+| Chrome / Edge 94+ | ✅ Full |
+| Firefox 130+ | ✅ Full |
 | Safari 16.4+ | ⚠️ Partial (WebCodecs limited) |
 | Mobile browsers | ⚠️ Input handling limited |
 
 ---
 
+## End-to-End Setup Guide
+
+This guide takes you from zero to a working browser-based remote desktop. There are three parts:
+
+1. [Set up RustDesk on the host machine](#step-1-set-up-rustdesk-on-the-host-machine)
+2. [Deploy your own relay server](#step-2-deploy-your-relay-server-hbbs--hbbr)
+3. [Deploy rclient](#step-3-deploy-rclient)
+
+---
+
+### Step 1: Set Up RustDesk on the Host Machine
+
+The **host** is the computer you want to control remotely (e.g. your home PC).
+
+1. Download and install [RustDesk](https://rustdesk.com/docs/en/client/windows-and-mac/) on it
+2. Open RustDesk. Note your **Machine ID** and set a **Password** (the one you'll type in rclient later)
+3. Go to **Settings → Network** and configure your relay server:
+   - **ID/Relay Server**: your VPS IP or domain (e.g. `relay.yourdomain.com`)
+   - **Key**: the server public key (you'll get this in Step 2)
+4. Make sure RustDesk is running (it can run as a background service)
+
+> 💡 The host machine just needs to be on the internet and reachable via your relay server — no port forwarding required.
+
+---
+
+### Step 2: Deploy Your Relay Server (hbbs + hbbr)
+
+Skip this step if you already have a relay server running. If you're using public RustDesk servers, rclient will still work — but running your own gives you lower latency and full privacy.
+
+**On your VPS**, create a working directory and compose file:
+
+```bash
+mkdir -p ~/rustdesk/data
+cd ~/rustdesk
+```
+
+Create `docker-compose.infra.yml`:
+
+```yaml
+version: "3"
+
+networks:
+  rustdesk-net:
+    name: rustdesk-net
+
+services:
+  hbbs:
+    image: rustdesk/rustdesk-server:latest
+    container_name: hbbs
+    command: hbbs
+    ports:
+      - "21115:21115"
+      - "21116:21116"
+      - "21116:21116/udp"
+      - "21118:21118"
+    volumes:
+      - ./data:/root
+    networks:
+      - rustdesk-net
+    restart: unless-stopped
+    depends_on:
+      - hbbr
+
+  hbbr:
+    image: rustdesk/rustdesk-server:latest
+    container_name: hbbr
+    command: hbbr
+    ports:
+      - "21117:21117"
+      - "21119:21119"
+    volumes:
+      - ./data:/root
+    networks:
+      - rustdesk-net
+    restart: unless-stopped
+```
+
+Start it and grab the server key:
+
+```bash
+docker compose -f docker-compose.infra.yml up -d
+docker logs hbbs 2>&1 | grep "Key:"
+```
+
+The key looks like: `zJDp2iyK8zXDFZYUQxyftU+C9254fdIb3Xmngpj9DfI=`
+
+Go back to Step 1 and paste this key into RustDesk's **Network → Key** field on your host machine.
+
+---
+
+### Step 3: Deploy rclient
+
+**On your VPS** (same machine as the relay, or a different one), create `docker-compose.app.yml`:
+
+```yaml
+version: "3"
+
+networks:
+  rustdesk-net:
+    external: true
+    name: rustdesk-net
+
+services:
+  gateway:
+    image: ghcr.io/linkzy/rclient-gateway:latest
+    container_name: rclient-gateway
+    environment:
+      - HBBS_HOST=${HBBS_HOST:-hbbs}
+      - HBBS_WS_PORT=${HBBS_WS_PORT:-21118}
+      - HBBR_HOST=${HBBR_HOST:-hbbr}
+      - HBBR_WS_PORT=${HBBR_WS_PORT:-21119}
+      - SERVER_KEY=${SERVER_KEY}
+    networks:
+      - rustdesk-net
+    restart: unless-stopped
+
+  web:
+    image: ghcr.io/linkzy/rclient-web:latest
+    container_name: rclient-web
+    ports:
+      - "127.0.0.1:8080:80"
+    networks:
+      - rustdesk-net
+    restart: unless-stopped
+    depends_on:
+      - gateway
+```
+
+Create a `.env` file next to it:
+
+```env
+SERVER_KEY=your-server-key-here
+```
+
+Start it:
+
+```bash
+docker compose -f docker-compose.app.yml up -d
+```
+
+The web UI is now running on `http://localhost:8080`.
+
+---
+
+### Step 4: Expose rclient via HTTPS
+
+Browsers require HTTPS for WebCodecs to work. Two options:
+
+#### Option A — Cloudflare Tunnel (recommended, free, no port forwarding needed)
+
+Install [cloudflared](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/):
+
+```bash
+curl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
+sudo dpkg -i cloudflared.deb
+```
+
+Log in and create a tunnel:
+
+```bash
+cloudflared tunnel login
+cloudflared tunnel create rclient
+```
+
+Create `/etc/cloudflared/config.yml`:
+
+```yaml
+tunnel: <your-tunnel-id>
+credentials-file: /root/.cloudflared/<your-tunnel-id>.json
+
+ingress:
+  - hostname: rclient.yourdomain.com
+    service: http://localhost:8080
+  - service: http_status:404
+```
+
+Add the DNS record and start:
+
+```bash
+cloudflared tunnel route dns rclient rclient.yourdomain.com
+sudo cloudflared service install
+sudo systemctl enable --now cloudflared
+```
+
+#### Option B — Reverse proxy with Let's Encrypt (nginx, Caddy, Traefik)
+
+Example with Caddy:
+
+```
+rclient.yourdomain.com {
+  reverse_proxy localhost:8080
+}
+```
+
+---
+
+### Step 5: Connect
+
+1. Open `https://rclient.yourdomain.com` in your browser
+2. Enter the **Machine ID** from RustDesk on the host machine
+3. Enter the **Password** you set in RustDesk
+4. Click **Connect**
+
+You should see the remote screen within a few seconds.
+
+---
+
+## Environment Variables
+
+| Variable | Description | Default |
+|---|---|---|
+| `SERVER_KEY` | Server public key (base64, from hbbs logs) | _required_ |
+| `HBBS_HOST` | Rendezvous server hostname | `hbbs` |
+| `HBBS_WS_PORT` | hbbs WebSocket port | `21118` |
+| `HBBR_HOST` | Relay server hostname | `hbbr` |
+| `HBBR_WS_PORT` | hbbr WebSocket port | `21119` |
+
+---
+
+## Performance
+
+rclient is functional and usable. On a well-located relay server (e.g. same region as your host machine):
+
+- **Keyboard/mouse input**: near-instant (< 10ms perceived latency)
+- **Video**: 3–16 FPS depending on screen activity (typing, browsing = fine; fast video = choppy)
+- **Latency**: determined mainly by your relay server location — co-locating relay and host in the same region helps most
+
+> The video frame rate is not yet at the native app's level (30 FPS). This is a known area of active improvement. See the [Roadmap](#roadmap).
+
+---
+
 ## Limitations
 
-- **Session drops after ~10 seconds** — Known issue (KI-001). ✅ Fixed.
-- **Relay-only**: The web client always connects via your relay server (no direct P2P connection). This means latency depends on your relay server location.
-- **Single monitor**: Currently connects to the primary display only.
-- **No file transfer**: Remote control only (keyboard + mouse + screen).
-- **No audio**: Not yet implemented.
-- **Keyboard layout / Caps Lock bug** — KI-005. Characters may appear shifted or wrong on the remote machine due to key event translation issues.
-- **Mouse scroll direction inverted** — KI-004. Scroll up/down is reversed on the remote.
+| Issue | Status |
+|---|---|
+| Video capped at ~16 FPS | Under improvement |
+| Keyboard layout / Caps Lock mismatch (KI-005) | Known bug, fix pending |
+| Mouse scroll wheel inverted (KI-004) | Known bug, fix pending |
+| No audio | Planned (see Roadmap) |
+| No file transfer | Planned |
+| Single monitor only | Planned |
+| Mobile touch input | Partial — basic mouse works |
 
 ---
 
-## Project Status
+## Roadmap
 
-This project is under active development. See the task list in the developer docs.
+Features not yet implemented but planned:
+
+- [ ] **Audio streaming** — receive and play remote audio in the browser
+- [ ] **File transfer** — upload/download files to/from the remote machine
+- [ ] **Multi-monitor support** — switch between displays
+- [ ] **Keyboard layout fix** (KI-005) — correct character mapping for non-US layouts
+- [ ] **Scroll direction fix** (KI-004) — invert mouse wheel delta
+- [ ] **Browser-level authentication** — protect the rclient UI with a login page (currently anyone with the URL can attempt connections)
+- [ ] **Mobile touch support** — proper touch-to-mouse mapping for phones and tablets
+- [ ] **Clipboard sync** — paste text into the remote machine
+- [ ] **Session persistence** — reconnect automatically after network drop
+- [ ] **30 FPS** — further protocol tuning to match native app frame rate
 
 ---
 
-## Development
+## Security Considerations
 
-See the developer documentation in the `docs/` folder.
+- **Never expose the gateway port (4000) publicly** — only the `web` container should be public-facing. The gateway is automatically internal-only in the provided compose setup.
+- **Use HTTPS** — required for WebCodecs and important for protecting your connection password in transit.
+- **Add browser-level authentication** — currently the rclient UI is open to anyone who knows the URL. Until a login page is added (see Roadmap), consider restricting access at the reverse proxy level (e.g. HTTP Basic Auth in nginx/Caddy).
+- **Passwords are never stored** — rclient only uses the password during the RustDesk handshake and never logs or persists it.
+
+---
+
+## Project Structure
 
 ```
-docs/
-├── AI_GUIDELINES.md   — Architecture overview and coding conventions
-├── ARCHITECTURE.md    — Detailed system design and component diagram
-├── PROTOCOL.md        — RustDesk protocol reference (protobuf, encryption, codecs)
-├── TASKS.md           — Development task list
-└── KNOWN_ISSUES.md    — Confirmed bugs with root cause and fix guidance
+rclient/
+├── gateway/          ← Node.js/TypeScript backend (RustDesk protocol bridge)
+│   └── src/
+│       ├── proto/         ← .proto files
+│       ├── rendezvous.ts  ← hbbs WebSocket client
+│       ├── relay.ts       ← hbbr WebSocket client
+│       ├── session.ts     ← per-connection session (encryption, video, input)
+│       └── server.ts      ← WebSocket server facing the browser
+├── web/              ← React/TypeScript frontend
+│   └── src/
+│       ├── components/    ← ConnectForm, RemoteScreen
+│       ├── hooks/         ← useGateway (WebSocket connection)
+│       └── video/         ← WebCodecs decoder
+├── docker-compose.yml
+├── docker-compose.prod.yml
+└── docs/             ← Technical documentation
 ```
+
+---
+
+## Developer Documentation
+
+For contributors and AI agents, the full technical docs are in [`docs/`](./docs/):
+
+| File | Contents |
+|---|---|
+| [`docs/AI_GUIDELINES.md`](./docs/AI_GUIDELINES.md) | Architecture overview, coding conventions, common pitfalls |
+| [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) | System design, component diagram, gateway WebSocket API |
+| [`docs/PROTOCOL.md`](./docs/PROTOCOL.md) | RustDesk protocol reference (protobuf, encryption, codecs) |
+| [`docs/KNOWN_ISSUES.md`](./docs/KNOWN_ISSUES.md) | Confirmed bugs with root cause analysis |
 
 ---
 
 ## Contributing
 
-1. Read `docs/AI_GUIDELINES.md` first
-2. Check `docs/TASKS.md` for the current task list
-3. Pick a task, implement it, mark it done
+1. Read [`docs/AI_GUIDELINES.md`](./docs/AI_GUIDELINES.md) first
+2. Check [`docs/KNOWN_ISSUES.md`](./docs/KNOWN_ISSUES.md) before touching `session.ts`
+3. Pick something from the [Roadmap](#roadmap) or [Known Issues](#limitations)
+4. Open a PR
 
 ---
 
 ## License
 
 MIT
-
----
-
----
-
-> **For AI agents / developers**: The technical documentation is in [`docs/`](./docs/).  
-> Start with [`docs/AI_GUIDELINES.md`](./docs/AI_GUIDELINES.md) for orientation,  
-> then [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) for system design,  
-> [`docs/PROTOCOL.md`](./docs/PROTOCOL.md) for the RustDesk protocol reference,  
-> and [`docs/TASKS.md`](./docs/TASKS.md) for the development task list.
-> 

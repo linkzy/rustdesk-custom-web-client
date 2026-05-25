@@ -1,6 +1,7 @@
 import WebSocket from 'ws';
 import { v4 as uuidv4 } from 'uuid';
 import { loadProtos, encodeRendezvousMessage, decodeRendezvousMessage } from './utils/proto';
+import type { ServerConfig } from './session';
 
 export interface RendezvousResult {
   relayServer: string;
@@ -8,11 +9,20 @@ export interface RendezvousResult {
   uuid: string;
 }
 
-export async function performRendezvous(targetId: string, attempt = 1): Promise<RendezvousResult> {
-  const hbbsHost = process.env.HBBS_HOST ?? 'localhost';
-  const hbbsPort = process.env.HBBS_WS_PORT ?? '21118';
+export async function performRendezvous(
+  targetId: string,
+  attempt = 1,
+  serverConfig?: ServerConfig,
+): Promise<RendezvousResult> {
+  // Parse optional "host:port" override or fall back to env
+  const hbbsOverride = serverConfig?.hbbsHost ?? '';
+  const [hbbsHostPart, hbbsPortPart] = hbbsOverride.includes(':')
+    ? hbbsOverride.split(':')
+    : [hbbsOverride, ''];
+  const hbbsHost = hbbsHostPart || (process.env.HBBS_HOST ?? 'localhost');
+  const hbbsPort = hbbsPortPart || (process.env.HBBS_WS_PORT ?? '21118');
+  const serverKey = (serverConfig?.serverKey ?? process.env.SERVER_KEY ?? '').trim();
   const url = `ws://${hbbsHost}:${hbbsPort}`;
-  const serverKey = (process.env.SERVER_KEY ?? '').trim();
   const MAX_ATTEMPTS = 3;
 
   const root = await loadProtos();
@@ -124,7 +134,7 @@ export async function performRendezvous(targetId: string, attempt = 1): Promise<
             if (resp.failure === 'OFFLINE' && attempt < MAX_ATTEMPTS) {
               console.log(`[rendezvous] Peer OFFLINE (attempt ${attempt}/${MAX_ATTEMPTS}), retrying in 2s...`);
               setTimeout(() => {
-                performRendezvous(targetId, attempt + 1).then(resolve).catch(reject);
+                performRendezvous(targetId, attempt + 1, serverConfig).then(resolve).catch(reject);
               }, 2000);
             } else {
               const hint = resp.failure === 'OFFLINE'

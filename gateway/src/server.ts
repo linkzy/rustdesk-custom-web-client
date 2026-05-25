@@ -37,6 +37,7 @@ wss.on('connection', (ws: WebSocket) => {
           targetId: msg.targetId,
           password: msg.password ?? '',
           browserWs: ws,
+          serverConfig: msg.serverConfig,
         });
         try {
           await session.connect();

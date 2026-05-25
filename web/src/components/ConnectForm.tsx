@@ -1,38 +1,53 @@
 import { useState } from 'react';
 import styles from './ConnectForm.module.css';
 
-const LS_ID_KEY  = 'rclient_target_id';
-const LS_PW_KEY  = 'rclient_password';
+const LS_ID_KEY      = 'rclient_target_id';
+const LS_PW_KEY      = 'rclient_password';
+const LS_HBBS_KEY    = 'rclient_hbbs_host';
+const LS_HBBR_KEY    = 'rclient_hbbr_host';
+const LS_SRVKEY_KEY  = 'rclient_server_key';
+const LS_ADV_KEY     = 'rclient_advanced_open';
+
+export interface ServerConfig {
+  hbbsHost?: string;
+  hbbrHost?: string;
+  serverKey?: string;
+}
 
 interface ConnectFormProps {
-  onConnect: (targetId: string, password: string) => void;
+  onConnect: (targetId: string, password: string, serverConfig?: ServerConfig) => void;
   onDisconnect: () => void;
   status: 'idle' | 'connecting' | 'connected' | 'error' | 'disconnected';
   error: string | null;
 }
 
 export function ConnectForm({ onConnect, onDisconnect, status, error }: ConnectFormProps) {
-  const [targetId, setTargetId] = useState(() => localStorage.getItem(LS_ID_KEY) ?? '');
-  const [password, setPassword] = useState(() => localStorage.getItem(LS_PW_KEY) ?? '');
+  const [targetId, setTargetId]   = useState(() => localStorage.getItem(LS_ID_KEY)   ?? '');
+  const [password, setPassword]   = useState(() => localStorage.getItem(LS_PW_KEY)   ?? '');
+  const [hbbsHost, setHbbsHost]   = useState(() => localStorage.getItem(LS_HBBS_KEY) ?? '');
+  const [hbbrHost, setHbbrHost]   = useState(() => localStorage.getItem(LS_HBBR_KEY) ?? '');
+  const [serverKey, setServerKey] = useState(() => localStorage.getItem(LS_SRVKEY_KEY) ?? '');
+  const [advOpen, setAdvOpen]     = useState(() => localStorage.getItem(LS_ADV_KEY) === 'true');
 
-  const handleIdChange = (v: string) => {
-    setTargetId(v);
-    localStorage.setItem(LS_ID_KEY, v);
-  };
+  const save = (key: string, val: string) => localStorage.setItem(key, val);
 
-  const handlePasswordChange = (v: string) => {
-    setPassword(v);
-    localStorage.setItem(LS_PW_KEY, v);
+  const toggleAdv = () => {
+    const next = !advOpen;
+    setAdvOpen(next);
+    localStorage.setItem(LS_ADV_KEY, String(next));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (targetId.trim()) {
-      onConnect(targetId.trim(), password);
-    }
+    if (!targetId.trim()) return;
+    const cfg: ServerConfig = {};
+    if (hbbsHost.trim())  cfg.hbbsHost  = hbbsHost.trim();
+    if (hbbrHost.trim())  cfg.hbbrHost  = hbbrHost.trim();
+    if (serverKey.trim()) cfg.serverKey = serverKey.trim();
+    onConnect(targetId.trim(), password, Object.keys(cfg).length ? cfg : undefined);
   };
 
-  const isConnected = status === 'connected';
+  const isConnected  = status === 'connected';
   const isConnecting = status === 'connecting';
 
   return (
@@ -52,7 +67,7 @@ export function ConnectForm({ onConnect, onDisconnect, status, error }: ConnectF
               type="text"
               placeholder="Enter RustDesk ID"
               value={targetId}
-              onChange={(e) => handleIdChange(e.target.value)}
+              onChange={(e) => { setTargetId(e.target.value); save(LS_ID_KEY, e.target.value); }}
               disabled={isConnecting}
               autoFocus
             />
@@ -64,10 +79,56 @@ export function ConnectForm({ onConnect, onDisconnect, status, error }: ConnectF
               type="password"
               placeholder="Connection password"
               value={password}
-              onChange={(e) => handlePasswordChange(e.target.value)}
+              onChange={(e) => { setPassword(e.target.value); save(LS_PW_KEY, e.target.value); }}
               disabled={isConnecting}
             />
           </div>
+
+          {/* Advanced options */}
+          <button type="button" className={styles.advancedToggle} onClick={toggleAdv}>
+            <span>{advOpen ? '▾' : '▸'}</span> Advanced options
+          </button>
+          {advOpen && (
+            <div className={styles.advancedSection}>
+              <p className={styles.advancedHint}>
+                Override the server defaults. Leave blank to use the gateway's built-in server.
+              </p>
+              <div className={styles.field}>
+                <label className={styles.label}>HBBS Host (rendezvous)</label>
+                <input
+                  className={styles.input}
+                  type="text"
+                  placeholder="e.g. myserver.com:21118"
+                  value={hbbsHost}
+                  onChange={(e) => { setHbbsHost(e.target.value); save(LS_HBBS_KEY, e.target.value); }}
+                  disabled={isConnecting}
+                />
+              </div>
+              <div className={styles.field}>
+                <label className={styles.label}>HBBR Host (relay)</label>
+                <input
+                  className={styles.input}
+                  type="text"
+                  placeholder="e.g. myserver.com:21119"
+                  value={hbbrHost}
+                  onChange={(e) => { setHbbrHost(e.target.value); save(LS_HBBR_KEY, e.target.value); }}
+                  disabled={isConnecting}
+                />
+              </div>
+              <div className={styles.field}>
+                <label className={styles.label}>Server Key</label>
+                <input
+                  className={styles.input}
+                  type="text"
+                  placeholder="base64 public key"
+                  value={serverKey}
+                  onChange={(e) => { setServerKey(e.target.value); save(LS_SRVKEY_KEY, e.target.value); }}
+                  disabled={isConnecting}
+                />
+              </div>
+            </div>
+          )}
+
           <button
             className={styles.button}
             type="submit"

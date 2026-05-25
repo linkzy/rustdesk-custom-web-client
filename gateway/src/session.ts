@@ -12,10 +12,17 @@ const CODEC_VP9  = 2;
 const CODEC_VP8  = 3;
 const CODEC_AV1  = 4;
 
+export interface ServerConfig {
+  hbbsHost?: string;  // e.g. "myserver.com:21118" or just "myserver.com"
+  hbbrHost?: string;  // e.g. "myserver.com:21119" or just "myserver.com"
+  serverKey?: string; // base64 public key
+}
+
 export interface SessionOptions {
   targetId: string;
   password: string;
-  browserWs: WebSocket;  // the browser's WebSocket connection
+  browserWs: WebSocket;
+  serverConfig?: ServerConfig;
 }
 
 export class Session {
@@ -47,10 +54,10 @@ export class Session {
     const targetId = this.targetId;
 
     console.log(`[session] Starting rendezvous for peer: ${targetId}`);
-    const { relayServer, uuid } = await performRendezvous(targetId);
+    const { relayServer, uuid } = await performRendezvous(targetId, 1, this.options.serverConfig);
     console.log(`[session] Rendezvous done. Relay: ${relayServer}, uuid: ${uuid}`);
 
-    this.relay = await connectRelay(targetId, relayServer, uuid);
+    this.relay = await connectRelay(targetId, relayServer, uuid, this.options.serverConfig);
     console.log('[session] Relay connected. Waiting for handshake...');
 
     this.gwFpsWindowStart = Date.now();

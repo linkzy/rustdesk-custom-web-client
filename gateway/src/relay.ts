@@ -1,5 +1,6 @@
 import WebSocket from 'ws';
 import { loadProtos, encodeRendezvousMessage } from './utils/proto';
+import type { ServerConfig } from './session';
 
 export type MessageHandler = (data: Buffer) => void;
 
@@ -44,12 +45,16 @@ export class RelayConnection {
 export async function connectRelay(
   targetId: string,
   relayServer: string,
-  uuid: string
+  uuid: string,
+  serverConfig?: ServerConfig,
 ): Promise<RelayConnection> {
-  // relayServer from hbbs is like "relay.example.com:21117"
-  // Use WS port (21119) instead of TCP port (21117)
-  const hbbr = process.env.HBBR_HOST ?? relayServer.split(':')[0];
-  const hbbrPort = process.env.HBBR_WS_PORT ?? '21119';
+  // Parse optional "host:port" override or fall back to env / relay server from hbbs
+  const hbbrOverride = serverConfig?.hbbrHost ?? '';
+  const [hbbrHostPart, hbbrPortPart] = hbbrOverride.includes(':')
+    ? hbbrOverride.split(':')
+    : [hbbrOverride, ''];
+  const hbbr     = hbbrHostPart || (process.env.HBBR_HOST ?? relayServer.split(':')[0]);
+  const hbbrPort = hbbrPortPart || (process.env.HBBR_WS_PORT ?? '21119');
   const url = `ws://${hbbr}:${hbbrPort}`;
 
   const root = await loadProtos();

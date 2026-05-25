@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { DecoderStats } from '../video/decoder';
+import type { ServerConfig } from '../components/ConnectForm';
 
 export type ConnectionStatus = 'idle' | 'connecting' | 'connected' | 'error' | 'disconnected';
+
 
 export interface ConnectionStats {
   fps: number;
@@ -23,7 +25,7 @@ export interface GatewayState {
 }
 
 export interface GatewayControls {
-  connect: (targetId: string, password: string) => void;
+  connect: (targetId: string, password: string, serverConfig?: ServerConfig) => void;
   disconnect: () => void;
   sendMouse: (x: number, y: number, mask: number, modifiers?: string[]) => void;
   sendKey: (down: boolean, key: string, keyCode: number, modifiers?: string[]) => void;
@@ -97,7 +99,7 @@ export function useGateway(): [GatewayState, GatewayControls] {
     }
   }, []);
 
-  const connect = useCallback((targetId: string, password: string) => {
+  const connect = useCallback((targetId: string, password: string, serverConfig?: ServerConfig) => {
     if (wsRef.current) wsRef.current.close();
     stopPing();
 
@@ -110,7 +112,7 @@ export function useGateway(): [GatewayState, GatewayControls] {
 
     ws.onopen = () => {
       addLog('WS open, sending connect');
-      ws.send(JSON.stringify({ type: 'connect', targetId, password }));
+      ws.send(JSON.stringify({ type: 'connect', targetId, password, serverConfig }));
     };
 
     ws.onmessage = (event) => {

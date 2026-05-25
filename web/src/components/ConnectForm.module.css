@@ -128,9 +128,38 @@
 .statusBadge[data-status="disconnected"] { color: #fbbf24; border: 1px solid #f59e0b; }
 .statusBadge[data-status="connected"] { color: #4ade80; border: 1px solid #22c55e; }
 
-.connectedPanel {
+
+.advancedToggle {
+  background: none;
+  border: none;
+  color: #64748b;
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 0.25rem 0;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  transition: color 0.2s;
+}
+
+.advancedToggle:hover {
+  color: #94a3b8;
+}
+
+.advancedSection {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  align-items: center;
+  padding: 1rem;
+  background: #0f172a;
+  border: 1px solid #1e293b;
+  border-radius: 8px;
 }
+
+.advancedHint {
+  font-size: 0.78rem;
+  color: #475569;
+  margin: 0;
+}
+
