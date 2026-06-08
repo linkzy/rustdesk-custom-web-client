@@ -7,6 +7,7 @@ const LS_HBBS_KEY    = 'rclient_hbbs_host';
 const LS_HBBR_KEY    = 'rclient_hbbr_host';
 const LS_SRVKEY_KEY  = 'rclient_server_key';
 const LS_ADV_KEY     = 'rclient_advanced_open';
+const LS_DEBUG_KEY   = 'rclient_debug_visible';
 
 export interface ServerConfig {
   hbbsHost?: string;
@@ -37,9 +38,11 @@ interface ConnectFormProps {
   onDisconnect: () => void;
   status: 'idle' | 'connecting' | 'connected' | 'error' | 'disconnected';
   error: string | null;
+  showDebug: boolean;
+  onShowDebugChange: (v: boolean) => void;
 }
 
-export function ConnectForm({ onConnect, onDisconnect, status, error }: ConnectFormProps) {
+export function ConnectForm({ onConnect, onDisconnect, status, error, showDebug, onShowDebugChange }: ConnectFormProps) {
   const [targetId, setTargetId]   = useState(() => localStorage.getItem(LS_ID_KEY)   ?? '');
   const [password, setPassword]   = useState(() => localStorage.getItem(LS_PW_KEY)   ?? '');
   const [hbbsHost, setHbbsHost]   = useState(() => localStorage.getItem(LS_HBBS_KEY) ?? '');
@@ -195,6 +198,15 @@ export function ConnectForm({ onConnect, onDisconnect, status, error }: ConnectF
                   disabled={isConnecting}
                 />
               </div>
+              <label className={styles.checkboxLabel}>
+                <input
+                  type="checkbox"
+                  className={styles.checkbox}
+                  checked={showDebug}
+                  onChange={(e) => { onShowDebugChange(e.target.checked); save(LS_DEBUG_KEY, String(e.target.checked)); }}
+                />
+                Show debug info
+              </label>
             </div>
           )}
 

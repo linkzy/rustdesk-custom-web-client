@@ -10,6 +10,10 @@ function App() {
   const [state, controls] = useGateway();
   const isConnected = state.status === 'connected';
 
+  const [showDebug, setShowDebug] = useState<boolean>(() => {
+    return localStorage.getItem('rclient_debug_visible') === 'true';
+  });
+
   const [fitToWindow, setFitToWindow] = useState<boolean>(() => {
     return localStorage.getItem('rclient_fit') !== 'false';
   });
@@ -45,7 +49,7 @@ function App() {
           <div className={fitToWindow ? styles.screenFit : styles.screenNative}>
             <RemoteScreen state={state} controls={controls} onLog={controls.addLog} fitToWindow={fitToWindow} />
           </div>
-          <StatsOverlay stats={state.stats} />
+          {showDebug && <StatsOverlay stats={state.stats} />}
         </>
       ) : (
         <ConnectForm
@@ -53,9 +57,11 @@ function App() {
           onDisconnect={controls.disconnect}
           status={state.status}
           error={state.error}
+          showDebug={showDebug}
+          onShowDebugChange={setShowDebug}
         />
       )}
-      <DebugPanel logs={state.logs} />
+      {showDebug && <DebugPanel logs={state.logs} />}
     </div>
   );
 }
