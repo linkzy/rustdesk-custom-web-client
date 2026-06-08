@@ -67,6 +67,14 @@
   background: #2563eb;
 }
 
+/* Fullscreen: fills entire viewport, no toolbar */
+.screenFullscreen {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  background: #000;
+}
+
 /* Fit: canvas scales to fill viewport */
 .screenFit {
   flex: 1;
