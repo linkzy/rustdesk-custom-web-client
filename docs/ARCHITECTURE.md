@@ -219,4 +219,4 @@ docker compose -f docker-compose.app.yml up -d --no-deps --force-recreate gatewa
 2. **Use TLS** in production — the nginx container handles this
 3. **Passwords are hashed** in the gateway before sending to the remote peer — the gateway never stores plaintext passwords
 4. **The browser never sees RustDesk encryption keys** — all crypto happens in the gateway
-5. **Consider adding gateway-level authentication** (e.g., a simple bearer token) if the gateway is exposed to the internet, to prevent unauthorized use of your relay server
+5. **Gateway is internal-only** — port 4000 is never exposed; only the web nginx container is public. The host machine password + hbbr key provide authentication.

@@ -104,8 +104,7 @@ The gateway connects to `hbbs`/`hbbr` exclusively via WebSocket (ports 21118/211
 The project is **working and deployed**. All 22 original development tasks are complete. The client successfully connects to a self-hosted RustDesk relay, streams H264 video at 3–16 FPS, and forwards keyboard/mouse input with near-zero latency.
 
 **Current known bugs** (open, fix pending):
-- KI-004 — Mouse scroll wheel direction inverted
-- KI-005 — Keyboard layout / Caps Lock mismatch
+- KI-006 — Common keyboard shortcuts (Ctrl+C, Ctrl+V, etc.) not forwarded to remote machine. See `docs/KNOWN_ISSUES.md` for details.
 
 **Active deployment:**
 - Relay: Oracle Cloud VPS, São Paulo (137.131.214.48)

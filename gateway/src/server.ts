@@ -133,7 +133,8 @@ wss.on('connection', (ws: WebSocket) => {
             modifiers: msg.modifiers ?? [],
           });
           if (!payload) return; // Dead / Unidentified / unsupported key — skip
-          sendLog(`key down=${msg.down} key="${msg.key}" → ${JSON.stringify(payload.key_event)}`);
+          // Disabled: verbose keystroke log (was sendLog). Restore for debugging keyboard input issues / shortcuts.
+          // sendLog(`key down=${msg.down} key="${msg.key}" → ${JSON.stringify(payload.key_event)}`);
           session.sendMessage(payload);
         } catch (e: any) {
           sendLog(`key encode error: ${e.message}`);

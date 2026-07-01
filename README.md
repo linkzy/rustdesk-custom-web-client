@@ -290,41 +290,34 @@ You should see the remote screen within a few seconds.
 rclient is functional and usable. On a well-located relay server (e.g. same region as your host machine):
 
 - **Keyboard/mouse input**: near-instant (< 10ms perceived latency)
-- **Video**: 3–16 FPS depending on screen activity (typing, browsing = fine; fast video = choppy)
+- **Video**: FPS depends on host machine performance and relay proximity. Typing and browsing are smooth.
 - **Latency**: determined mainly by your relay server location — co-locating relay and host in the same region helps most
-
-> The video frame rate is not yet at the native app's level (30 FPS). This is a known area of active improvement. See the [Roadmap](#roadmap).
 
 ---
 
 ## Limitations
 
 | Issue | Status |
-|---|---|
-| Video capped at ~16 FPS | Under improvement |
-| Keyboard layout / Caps Lock mismatch (KI-005) | Known bug, fix pending |
-| Mouse scroll wheel inverted (KI-004) | Known bug, fix pending |
+|---|---|---|
 | No audio | Planned (see Roadmap) |
 | No file transfer | Planned |
 | Single monitor only | Planned |
-| Mobile touch input | Partial — basic mouse works |
+| Clipboard sync | Planned |
 
 ---
 
 ## Roadmap
 
-Features not yet implemented but planned:
+See `docs/TASKS.md` for full status. Key items:
 
+- [ ] **Past hosts cards** — after a successful connection, save the host as a card (ID, password, custom relay). Click to auto-connect.
+- [ ] **Demo defaults to public RustDesk servers** — so random visitors can try it with their own machines
+- [ ] **Mobile keyboard input** — on-screen keyboard overlay or device keyboard forwarding for mobile browsers
 - [ ] **Audio streaming** — receive and play remote audio in the browser
 - [ ] **File transfer** — upload/download files to/from the remote machine
 - [ ] **Multi-monitor support** — switch between displays
-- [ ] **Keyboard layout fix** (KI-005) — correct character mapping for non-US layouts
-- [ ] **Scroll direction fix** (KI-004) — invert mouse wheel delta
-- [ ] **Browser-level authentication** — protect the rclient UI with a login page (currently anyone with the URL can attempt connections)
-- [ ] **Mobile touch support** — proper touch-to-mouse mapping for phones and tablets
 - [ ] **Clipboard sync** — paste text into the remote machine
-- [ ] **Session persistence** — reconnect automatically after network drop
-- [ ] **30 FPS** — further protocol tuning to match native app frame rate
+- [ ] **Session auto-reconnect** — reconnect automatically after network drop
 
 ---
 
@@ -332,7 +325,6 @@ Features not yet implemented but planned:
 
 - **Never expose the gateway port (4000) publicly** — only the `web` container should be public-facing. The gateway is automatically internal-only in the provided compose setup.
 - **Use HTTPS** — required for WebCodecs and important for protecting your connection password in transit.
-- **Add browser-level authentication** — currently the rclient UI is open to anyone who knows the URL. Until a login page is added (see Roadmap), consider restricting access at the reverse proxy level (e.g. HTTP Basic Auth in nginx/Caddy).
 - **Passwords are never stored** — rclient only uses the password during the RustDesk handshake and never logs or persists it.
 
 ---
