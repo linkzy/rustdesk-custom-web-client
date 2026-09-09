@@ -1,7 +1,10 @@
 import { useEffect, useRef } from 'react';
 import { VideoFrameDecoder } from '../video/decoder';
+import { OpusAudioPlayer } from '../video/audio';
 import type { GatewayControls, GatewayState } from '../hooks/useGateway';
 import styles from './RemoteScreen.module.css';
+
+const CODEC_AUDIO = 5;
 
 interface RemoteScreenProps {
   state: GatewayState;
@@ -14,6 +17,7 @@ export function RemoteScreen({ state, controls, onLog, fitToWindow = true }: Rem
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const decoderRef = useRef<VideoFrameDecoder | null>(null);
+  const audioRef = useRef<OpusAudioPlayer | null>(null);
 
   // Stable refs so all effects run once but always see latest values
   const controlsRef = useRef(controls);
@@ -28,7 +32,7 @@ export function RemoteScreen({ state, controls, onLog, fitToWindow = true }: Rem
     onLogRef.current?.(msg);
   };
 
-  // Video decoder — runs once
+  // Video + audio decoders — run once
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -45,8 +49,38 @@ export function RemoteScreen({ state, controls, onLog, fitToWindow = true }: Rem
       (stats) => controlsRef.current.updateFrameStats(stats),
     );
     decoderRef.current = decoder;
-    controlsRef.current.onVideoFrame((data) => decoder.handleFrame(data));
-    return () => { decoder.close(); decoderRef.current = null; };
+
+    // Opus audio player. Only plays when the browser supports WebCodecs AudioDecoder.
+    let audioLoggedFormat = false;
+    const audio = new OpusAudioPlayer((st) => {
+      if (st.streaming && st.sampleRate && !audioLoggedFormat) {
+        audioLoggedFormat = true;
+        controlsRef.current.addLog(`audio: ${st.sampleRate} Hz, ${st.channels} ch`);
+      }
+    });
+    audioRef.current = audio;
+
+    // Host announces the audio format (sample_rate/channels) via Misc.audio_format.
+    controlsRef.current.onAudioFormat((fmt) => {
+      audio.setFormat(fmt.sampleRate, fmt.channels);
+    });
+
+    // Binary frames from the gateway: marker byte 5 = Opus audio, otherwise video.
+    controlsRef.current.onVideoFrame((data) => {
+      const bytes = new Uint8Array(data);
+      if (bytes.length > 0 && bytes[0] === CODEC_AUDIO) {
+        audio.handleFrame(data);
+        return;
+      }
+      decoder.handleFrame(data);
+    });
+
+    return () => {
+      audio.stop();
+      audioRef.current = null;
+      decoder.close();
+      decoderRef.current = null;
+    };
   }, []);
 
   // All input: native DOM listeners, run once on mount

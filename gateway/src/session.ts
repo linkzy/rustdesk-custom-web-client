@@ -7,10 +7,11 @@ import { connectRelay, RelayConnection } from './relay';
 import type * as protobuf from 'protobufjs';
 
 // Codec IDs for the binary frame header sent to the browser
-const CODEC_H264 = 1;
-const CODEC_VP9  = 2;
-const CODEC_VP8  = 3;
-const CODEC_AV1  = 4;
+const CODEC_H264  = 1;
+const CODEC_VP9   = 2;
+const CODEC_VP8   = 3;
+const CODEC_AV1   = 4;
+const CODEC_AUDIO = 5; // Opus audio
 
 export interface ServerConfig {
   hbbsHost?: string;  // e.g. "myserver.com:21118" or just "myserver.com"
@@ -109,6 +110,8 @@ export class Session {
       } else if (msg.video_frame) {
         this.gwFrameCount++;
         this.handleVideoFrame(msg.video_frame);
+      } else if (msg.audio_frame) {
+        this.handleAudioFrame(msg.audio_frame);
       } else if (msg.peer_info) {
         this.handlePeerInfo(msg.peer_info);
       } else if (msg.misc) {
@@ -169,6 +172,7 @@ export class Session {
           },
           image_quality: 3,  // Balanced (Low=2, Balanced=3, Best=4)
           custom_fps: 30,    // request 30 FPS from host
+          disable_audio: 1,  // No (1) = do NOT disable audio → enables host audio stream
         },
         video_ack_required: false,
         session_id: Math.floor(Math.random() * 0xFFFFFFFF),
@@ -228,6 +232,18 @@ export class Session {
   }
 
   private handleMisc(misc: any): void {
+    // Host announces its audio format (sample rate, channels) when the audio
+    // service is subscribed. Forward it so the browser can configure its decoder.
+    if (misc.audio_format) {
+      const fmt = misc.audio_format;
+      console.log(`[session] Host audio_format: ${fmt.sample_rate} Hz, ${fmt.channels} ch`);
+      this.sendBrowserJson({
+        type: 'audio_format',
+        sampleRate: Number(fmt.sample_rate) || 0,
+        channels: Number(fmt.channels) || 0,
+      });
+    }
+
     // Log all non-default fields so we can see what the host is telling us
     const active = Object.entries(misc)
       .filter(([, v]) => v !== null && v !== undefined && v !== false && v !== 0 && v !== '')
@@ -348,6 +364,24 @@ export class Session {
       if (this.options.browserWs.readyState === WebSocket.OPEN) {
         this.options.browserWs.send(packet);
       }
+    }
+  }
+
+  // AudioFrame.data is a raw Opus packet from the host's audio_service.
+  // Forward it to the browser with the audio codec marker byte so the web
+  // client can route it to its Opus decoder.
+  private handleAudioFrame(frame: any): void {
+    if (!frame?.data) return;
+    const opus = Buffer.from(frame.data, 'base64');
+    if (opus.length === 0) return;
+
+    const packet = Buffer.alloc(2 + opus.length);
+    packet[0] = CODEC_AUDIO;
+    packet[1] = 0;
+    opus.copy(packet, 2);
+
+    if (this.options.browserWs.readyState === WebSocket.OPEN) {
+      this.options.browserWs.send(packet);
     }
   }
 

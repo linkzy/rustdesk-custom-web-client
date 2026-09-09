@@ -30,6 +30,7 @@ export interface GatewayControls {
   sendMouse: (x: number, y: number, mask: number, modifiers?: string[]) => void;
   sendKey: (down: boolean, key: string, keyCode: number, modifiers?: string[]) => void;
   onVideoFrame: (handler: (data: ArrayBuffer) => void) => void;
+  onAudioFormat: (handler: (format: { sampleRate: number; channels: number }) => void) => void;
   addLog: (msg: string) => void;
   updateFrameStats: (s: DecoderStats) => void;
 }
@@ -54,6 +55,7 @@ const DEFAULT_STATS: ConnectionStats = {
 export function useGateway(): [GatewayState, GatewayControls] {
   const wsRef = useRef<WebSocket | null>(null);
   const videoHandlerRef = useRef<((data: ArrayBuffer) => void) | null>(null);
+  const audioFormatHandlerRef = useRef<((format: { sampleRate: number; channels: number }) => void) | null>(null);
   const pingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const [state, setState] = useState<GatewayState>({
@@ -134,6 +136,8 @@ export function useGateway(): [GatewayState, GatewayControls] {
             startPing();
           } else if (msg.type === 'gw_stats') {
             setState((s) => ({ ...s, stats: { ...s.stats, gwFps: msg.gwFps ?? 0 } }));
+          } else if (msg.type === 'audio_format') {
+            audioFormatHandlerRef.current?.({ sampleRate: msg.sampleRate, channels: msg.channels });
           } else if (msg.type === 'pong') {
             const pingMs = Math.round(performance.now() - msg.ts);
             setState((s) => ({ ...s, stats: { ...s.stats, pingMs } }));
@@ -193,6 +197,10 @@ export function useGateway(): [GatewayState, GatewayControls] {
     videoHandlerRef.current = handler;
   }, []);
 
+  const onAudioFormat = useCallback((handler: (format: { sampleRate: number; channels: number }) => void) => {
+    audioFormatHandlerRef.current = handler;
+  }, []);
+
   useEffect(() => {
     return () => {
       wsRef.current?.close();
@@ -202,6 +210,6 @@ export function useGateway(): [GatewayState, GatewayControls] {
 
   return [
     state,
-    { connect, disconnect, sendMouse, sendKey, onVideoFrame, addLog, updateFrameStats },
+    { connect, disconnect, sendMouse, sendKey, onVideoFrame, onAudioFormat, addLog, updateFrameStats },
   ];
 }
