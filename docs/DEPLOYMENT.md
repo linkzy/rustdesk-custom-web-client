@@ -210,8 +210,8 @@ frame rates — and never the password. A verbose per-keystroke log exists in
 |---|---|
 | **"Wrong password"** | The RustDesk password on the host, not your rclient login (there isn't one). Check it in RustDesk, and remember the host may have both a permanent and a one-time password. |
 | **"That machine is offline"** | RustDesk is not running on the host, or it is not connected to the relay you configured. Check both ends point at the same `HBBS_HOST`. |
-| **"The relay did not answer"** | The gateway cannot reach `HBBS_HOST:21118`. Test from inside the gateway container: `docker compose exec gateway node -e "fetch('http://hbbs:21118')"` (expect a refusal, not a DNS error). |
-| **"Could not reach the relay"** | Wrong host/port, or the relay's WebSocket ports are blocked. `21118`/`21119` must be reachable from the gateway. |
+| **"The relay did not answer"** | The gateway could not reach `HBBS_HOST`:`HBBS_WS_PORT` before its 15 s timeout. Check the address is reachable **from the gateway container**, not from your laptop: `docker compose exec gateway node -e "require('net').connect(21118,'your-relay-host').on('connect',()=>{console.log('open');process.exit(0)}).on('error',e=>{console.log(e.code);process.exit(1)})"` (a DNS or `ECONNREFUSED` error names the problem). |
+| **"Could not reach the relay"** | Wrong host or port, or the relay's WebSocket ports are blocked on the way. `21118`/`21119` must be reachable from the gateway. |
 | **Connects, then "waiting for image"** | The rendezvous worked but the relay stream did not — most often the relay ports (`21117`/`21119`) are unreachable. This is exactly the public-relay problem the demo has; see [`../deploy/DEMO.md`](../deploy/DEMO.md). |
 | **Page loads, `/ws` closes immediately** | Your reverse proxy is not upgrading the WebSocket. Compare with `web/nginx.conf`. |
 | **No video** | The browser lacks WebCodecs `VideoDecoder`, or you are on plain HTTP (not a secure context). Open the browser console; the decoder logs the codec it initialised. |
