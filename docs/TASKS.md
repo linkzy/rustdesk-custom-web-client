@@ -28,9 +28,9 @@ keyboard and mouse input, audio (Opus via `AudioDecoder`, R-09), fullscreen
 KI-005 (keyboard case/layout). See `docs/KNOWN_ISSUES.md`.
 
 **Deployment:** `docker-compose.yml` (from source), `docker-compose.prod.yml`
-(published images), the public demo at <https://rclient-demo.linkzy.dev> (R-14b),
-and the demo's stability settings (memory caps and log rotation, R-16/R-19 —
-partial: only the demo stack has them).
+(published images), the public demo at <https://rclient-demo.linkzy.dev> on its
+own relay pair, and the demo's stability settings (memory caps and log rotation,
+R-16/R-19 — partial: only the demo stack has them).
 
 ---
 

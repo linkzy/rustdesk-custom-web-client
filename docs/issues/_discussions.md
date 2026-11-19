@@ -10,18 +10,26 @@ browser page that connects through **your own** relay to a machine running the
 RustDesk host app. No install on the controlling side, no account, no analytics
 added by the project.
 
-- Try it: <https://rclient-demo.linkzy.dev> — a separate demo instance, currently
-  pointing at RustDesk's public servers. See the caveat below before judging it.
+- Try it: <https://rclient-demo.linkzy.dev> — a separate demo instance with its own
+  relay. Before you connect, point your RustDesk host at that relay (see the status
+  below).
 - Read: [`docs/README.md`](https://github.com/linkzy/rustdesk-custom-web-client/blob/main/docs/README.md)
   routes every kind of reader to the right page.
 - Deploy your own: the README's setup guide.
 
-**Honest status.** Video, input and audio work against a self-hosted relay. The
-public demo routes through RustDesk's shared servers, and their relay ports were
-refusing connections when it was deployed — the ID server answers, the relay did
-not. Until that is resolved the demo is labelled *degraded*: it may fail with
-"connected, waiting for image". Your own relay is the path that is actually
-verified. The full evidence is in
+**Honest status.** Video, input and audio work against a self-hosted relay, and
+that is still the path vouched for end to end. The public demo now runs its **own**
+relay pair (hbbs+hbbr) on the DNS-only hostname `relay-demo.linkzy.dev`, because
+RustDesk's shared relay ports were refusing connections from its host. The relay is
+verified at protocol level — ports reachable, key enforced, peers pairing through
+hbbr — but a full session from a real RustDesk host to the browser is **not** proven
+yet, so treat the demo as "should work, unproven".
+
+**To try the demo:** in RustDesk on the machine you want to control, set **ID
+Server** to `relay-demo.linkzy.dev` and paste the demo key shown on the demo page;
+leave Relay/API server blank. Then enter that machine's ID and password in the
+browser. A machine still pointing at RustDesk's public servers will not be found —
+they are separate networks. Evidence and key rotation:
 [`deploy/DEMO.md`](https://github.com/linkzy/rustdesk-custom-web-client/blob/main/deploy/DEMO.md).
 
 ## What is planned
