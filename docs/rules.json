@@ -279,6 +279,27 @@
       "check": "gateway/package.json protobufjs major is 7; #28 unmerged until T23 unblocks.",
       "updatedAt": 1795129997012,
       "updatedBy": "core"
+    },
+    {
+      "id": "PROJ-012",
+      "area": "PROJ",
+      "stage": "A",
+      "text": "Every pull request from a fork gets a security review before merge: read the diff before executing it, check the dependency surface first, diff against the merge-base (not main), and look for injection, data leaving the page, credential exposure and weakened checks.",
+      "action": "docs/SECURITY-REVIEW.md is the checklist; sentinel does the review and reports a verdict line to core. Core does not merge a fork PR on CI alone.",
+      "citations": [
+        {
+          "source": "HUM",
+          "location": "Request after PR #35 appeared",
+          "excerpt": "just make sure its very carefull about security, we must ensure the contributir is not implementing vunerabilities"
+        }
+      ],
+      "imposedBy": "HMN",
+      "confirmation": "found",
+      "status": "done",
+      "current": "Met for #35: design review (ci) plus security review (sentinel) plus local checks on the head, with both published on the PR. The checklist is merged.",
+      "check": "A fork PR has a comment with a security verdict naming what was checked, and no merge happened on CI status alone.",
+      "updatedAt": 1795130901885,
+      "updatedBy": "core"
     }
   ]
 }
