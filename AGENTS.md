@@ -26,15 +26,17 @@ cd gateway && npm ci
 npm run dev        # ts-node-dev, watches src/
 npm run build      # tsc → dist/
 npm run start      # node dist/server.js
-# (the "lint" script exists in package.json but eslint is not a dependency yet,
-#  so it fails; only `npm run build` works today)
+npm run lint       # eslint src --ext .ts
+npm run typecheck  # tsc -p tsconfig.typecheck.json
+npm test           # vitest run
 
 # web
 cd web && npm ci
 npm run dev        # Vite on :5173, proxies /ws → ws://localhost:4000
 npm run build      # tsc -b && vite build
-npm run lint       # eslint . — fails today on 4 pre-existing react-hooks
-                   # errors (RemoteScreen refs, ConnectForm captcha effect)
+npm run lint       # eslint .
+npm run typecheck  # tsc -b
+npm test           # vitest run (jsdom)
 
 # whole stack
 docker compose up -d              # from source
@@ -64,6 +66,7 @@ Read [`docs/AI_GUIDELINES.md`](./docs/AI_GUIDELINES.md) before touching `gateway
 |---|---|
 | Every doc, and what to read for what | [`docs/README.md`](./docs/README.md) |
 | Local setup without Docker | [`docs/DEVELOPMENT.md`](./docs/DEVELOPMENT.md) |
+| Cutting a release | [`docs/RELEASING.md`](./docs/RELEASING.md) |
 | Orientation, conventions, pitfalls | [`docs/AI_GUIDELINES.md`](./docs/AI_GUIDELINES.md) |
 | System design, gateway WS API, limitations | [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) |
 | RustDesk protocol details | [`docs/PROTOCOL.md`](./docs/PROTOCOL.md) |

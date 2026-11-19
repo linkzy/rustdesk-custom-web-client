@@ -121,16 +121,30 @@ That is a config change in `web/`, not part of the default setup.
 
 | Command | State |
 |---|---|
-| `cd gateway && npm run build` | Passes (`tsc` → `dist/`). This is the working gateway check. |
+| `cd gateway && npm run build` | Passes (`tsc` → `dist/`). |
+| `cd gateway && npm run lint` | Passes. `gateway/eslint.config.mjs` is a typescript-eslint flat config with Node globals. |
+| `cd gateway && npm run typecheck` | Passes (`tsc -p tsconfig.typecheck.json`, includes the tests). |
 | `cd web && npm run build` | Passes (`tsc -b && vite build` → `dist/`). |
-| `cd web && npm run lint` | **Fails today** on four pre-existing `react-hooks` errors: `RemoteScreen.tsx` writes refs during render (3×), `ConnectForm.tsx` calls `setCaptchaToken` inside an effect. Not caused by the current changes; fixing them belongs with the test/lint work. |
-| `cd gateway && npm run lint` | **Cannot run**: the script is `eslint src --ext .ts`, but `eslint` is not a dependency of `gateway/package.json`. |
+| `cd web && npm run lint` | Passes. |
+| `cd web && npm run typecheck` | Passes (`tsc -b`). |
+
+All six run in CI on every pull request and on `main`
+(`.github/workflows/ci.yml`), together with the tests.
 
 ### Tests
 
-There is no test runner configured in either package yet (no `test` script, no
-Vitest/Jest dependency). The one executable check is a manual protobuf
-round-trip:
+Both packages use [Vitest](https://vitest.dev/): 24 tests in `gateway/`
+(crypto, framing, key mapping, protobuf round-trips) and 25 in `web/`
+(password storage, error mapping, server-config parsing, the frame protocol — in
+`jsdom`).
+
+```bash
+npm test                 # both packages, from the repo root
+npm run test:gateway     # or one at a time
+npm run test:web
+```
+
+There is also a manual protobuf round-trip you can run on its own:
 
 ```bash
 cd gateway

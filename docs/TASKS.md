@@ -125,5 +125,9 @@ RustDesk host, protocol insight, or more than a day's work.
 - The most error-prone areas are: encryption (seqnum sync, nonce format), password hashing order, TestDelay echo direction (`from_client: false`), and `video_ack_required: false`
 - Keep the gateway stateful per session — each browser connection maps to exactly one relay connection
 - **Never commit `.env` files** — use `.env.example` with placeholder values only
-- `npm run build` passes in `web/`; `npm run lint` currently fails on four pre-existing `react-hooks` errors (`RemoteScreen.tsx` writes refs during render; `ConnectForm.tsx` calls `setCaptchaToken` inside an effect). Fixing them is test/lint work, not part of a feature change.
-- The gateway's `lint` script cannot run yet: `eslint` is not a dependency of `gateway/package.json`. `npm run build` (plain `tsc`) is the check that works.
+- `npm run build` passes in `web/` and in `gateway/`; so do `npm run lint`,
+  `npm run typecheck` and `npm test` in both. CI runs all four on every pull
+  request (`lint` is real work now: `gateway/eslint.config.mjs` exists and web's
+  four pre-existing `react-hooks` errors were fixed in code, not suppressed).
+- `docs/RELEASING.md` is the release checklist: bump, changelog, tag, images,
+  GitHub Release.

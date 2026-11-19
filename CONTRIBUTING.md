@@ -43,11 +43,10 @@ an issue first.
    direction, `video_ack_required: false`, password hash order) break sessions in
    ways that look like unrelated bugs. If you touch `gateway/src/session.ts`,
    read [`docs/KNOWN_ISSUES.md`](./docs/KNOWN_ISSUES.md) too.
-3. **Check the state of the checks.** `npm run build` passes in both packages
-   today. `npm run lint` in `web/` currently fails on four pre-existing
-   `react-hooks` errors, and the gateway's `lint` script cannot run because
-   `eslint` is not a dependency there. Don't be surprised — and don't "fix" it
-   with a broad reformat that hides real changes.
+3. **Check the state of the checks.** All of them pass in both packages today:
+   `lint`, `typecheck`, `test` and `build`, and CI runs the same four on your pull
+   request (`.github/workflows/ci.yml`). If one fails on your branch, it is your
+   branch — fix the cause rather than relaxing the rule or reformatting around it.
 
 > **Protocol work needs a real RustDesk host.** There is no fake host yet, so
 > changes to `session.ts`, `rendezvous.ts`, `relay.ts` or `keymap.ts` can only be
