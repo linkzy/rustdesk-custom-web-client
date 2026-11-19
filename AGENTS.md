@@ -26,12 +26,15 @@ cd gateway && npm ci
 npm run dev        # ts-node-dev, watches src/
 npm run build      # tsc → dist/
 npm run start      # node dist/server.js
+# (the "lint" script exists in package.json but eslint is not a dependency yet,
+#  so it fails; only `npm run build` works today)
 
 # web
 cd web && npm ci
 npm run dev        # Vite on :5173, proxies /ws → ws://localhost:4000
 npm run build      # tsc -b && vite build
-npm run lint       # eslint .
+npm run lint       # eslint . — fails today on 4 pre-existing react-hooks
+                   # errors (RemoteScreen refs, ConnectForm captcha effect)
 
 # whole stack
 docker compose up -d              # from source
