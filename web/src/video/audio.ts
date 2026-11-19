@@ -1,4 +1,4 @@
-const CODEC_AUDIO = 5;
+import { CODEC_AUDIO, parseFrame } from './frameProtocol';
 
 const hasWebCodecsAudio = typeof AudioDecoder !== 'undefined';
 const hasWebAudio = typeof AudioContext !== 'undefined';
@@ -77,9 +77,9 @@ export class OpusAudioPlayer {
   handleFrame(buffer: ArrayBuffer): void {
     if (!this.state.available) return;
 
-    const bytes = new Uint8Array(buffer);
-    if (bytes.length < 3 || bytes[0] !== CODEC_AUDIO) return;
-    const packet = bytes.slice(2);
+    const parsed = parseFrame(new Uint8Array(buffer));
+    if (!parsed || parsed.codecId !== CODEC_AUDIO) return;
+    const packet = parsed.payload.slice();
     if (packet.length === 0) return;
 
     try {

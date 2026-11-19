@@ -6,21 +6,18 @@ import {
   dropPasswordIfNotOptedIn,
   stagePasswordAttempt,
 } from '../utils/passwordStorage';
+import {
+  LS_ID_KEY,
+  LS_HBBS_KEY,
+  LS_HBBR_KEY,
+  LS_SRVKEY_KEY,
+  LS_ADV_KEY,
+  LS_DEBUG_KEY,
+  normalizeServerConfig,
+} from '../utils/connectForm';
+import type { ServerConfig } from '../utils/connectForm';
 
-const LS_ID_KEY      = 'rclient_target_id';
-const LS_HBBS_KEY    = 'rclient_hbbs_host';
-const LS_HBBR_KEY    = 'rclient_hbbr_host';
-const LS_SRVKEY_KEY  = 'rclient_server_key';
-const LS_ADV_KEY     = 'rclient_advanced_open';
-const LS_DEBUG_KEY   = 'rclient_debug_visible';
-
-export interface ServerConfig {
-  hbbsHost?: string;
-  hbbsPort?: string;
-  hbbrHost?: string;
-  hbbrPort?: string;
-  serverKey?: string;
-}
+export type { ServerConfig };
 
 interface GatewayConfig {
   captchaEnabled: boolean;
@@ -128,19 +125,11 @@ export function ConnectForm({ onConnect, onDisconnect, status, error, showDebug,
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!targetId.trim()) return;
-    const cfg: ServerConfig = {};
-    if (hbbsHost.trim())  cfg.hbbsHost  = hbbsHost.trim();
-    if (hbbrHost.trim())  cfg.hbbrHost  = hbbrHost.trim();
-    if (serverKey.trim()) cfg.serverKey = serverKey.trim();
+    const cfg = normalizeServerConfig({ hbbsHost, hbbrHost, serverKey });
     // Nothing is written to localStorage here — the password is only persisted
     // once the connection has actually succeeded (see App.tsx).
     stagePasswordAttempt(password);
-    onConnect(
-      targetId.trim(),
-      password,
-      Object.keys(cfg).length ? cfg : undefined,
-      captchaToken ?? undefined,
-    );
+    onConnect(targetId.trim(), password, cfg, captchaToken ?? undefined);
   };
 
   const isConnected  = status === 'connected';

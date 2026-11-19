@@ -1,0 +1,15 @@
+{
+  "name": "rclient",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Self-hosted web client for RustDesk",
+  "scripts": {
+    "install:all": "npm --prefix gateway ci && npm --prefix web ci",
+    "test": "npm --prefix gateway test && npm --prefix web test",
+    "test:gateway": "npm --prefix gateway test",
+    "test:web": "npm --prefix web test",
+    "typecheck": "npm --prefix gateway run typecheck && npm --prefix web run typecheck",
+    "lint": "npm --prefix gateway run lint && npm --prefix web run lint",
+    "build": "npm --prefix gateway run build && npm --prefix web run build"
+  }
+}

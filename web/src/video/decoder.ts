@@ -1,14 +1,4 @@
-const CODEC_H264 = 1;
-const CODEC_VP9  = 2;
-const CODEC_VP8  = 3;
-const CODEC_AV1  = 4;
-
-const CODEC_STRINGS: Record<number, string> = {
-  [CODEC_H264]: 'avc1.640028',
-  [CODEC_VP9]:  'vp09.00.10.08',
-  [CODEC_VP8]:  'vp8',
-  [CODEC_AV1]:  'av01.0.04M.08',
-};
+import { parseFrame, codecStringFor } from './frameProtocol';
 
 export type FrameCallback = (frame: VideoFrame) => void;
 
@@ -43,12 +33,11 @@ export class VideoFrameDecoder {
   }
 
   handleFrame(buffer: ArrayBuffer): void {
-    const bytes = new Uint8Array(buffer);
-    if (bytes.length < 3) return;
+    const parsed = parseFrame(new Uint8Array(buffer));
+    if (!parsed) return;
 
-    const codecId = bytes[0];
-    const isKeyframe = (bytes[1] & 1) === 1;
-    const frameData = bytes.slice(2);
+    const { codecId, isKeyframe, payload } = parsed;
+    const frameData = payload.slice();
 
     const now = performance.now();
 
@@ -89,7 +78,7 @@ export class VideoFrameDecoder {
     this.frameCount = 0;
     this.decodeStartTimes.clear();
 
-    const codecString = CODEC_STRINGS[codecId];
+    const codecString = codecStringFor(codecId);
     if (!codecString) {
       console.error('[decoder] Unknown codec ID:', codecId);
       return;

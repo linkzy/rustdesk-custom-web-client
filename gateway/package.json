@@ -7,6 +7,9 @@
     "build": "tsc",
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "start": "node dist/server.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc -p tsconfig.typecheck.json",
     "lint": "eslint src --ext .ts"
   },
   "dependencies": {
@@ -22,6 +25,7 @@
     "@types/uuid": "^10.0.0",
     "@types/ws": "^8.5.14",
     "ts-node-dev": "^2.0.0",
-    "typescript": "^5.8.0"
+    "typescript": "^5.8.0",
+    "vitest": "^5.1.1"
   }
 }
