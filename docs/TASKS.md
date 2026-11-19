@@ -1,80 +1,124 @@
-# Development Task List
+# Roadmap
 
-> **AI agents**: All Phase 1–7 tasks are complete as of v0.1.0. The project is working.  
-> Current work focuses on the known issues and roadmap items below.  
-> Statuses here are kept in sync with `docs/KNOWN_ISSUES.md` and with the code on `main`.
+What is finished, what is open, and where to start. Every open item keeps its
+`R-xx` id — the GitHub issues built from this list use the same ids in their
+titles, so the two never drift.
 
----
-
-## Phase 1–7: Complete ✅
-
-All 22 original tasks are done. See git history for implementation details.
-
-| Phase | Tasks | Done |
-|---|---|---|
-| 1 — Foundation | 3 | 3 |
-| 2 — Rendezvous | 2 | 2 |
-| 3 — Relay | 2 | 2 |
-| 4 — Session | 3 | 3 |
-| 5 — Input | 2 | 2 |
-| 6 — Frontend | 7 | 7 |
-| 7 — Deploy | 3 | 3 |
-| **Total** | **22** | **22** |
+- Statuses here are kept in sync with `docs/KNOWN_ISSUES.md` and with the code on
+  `main`.
+- Issue drafts for each open item live in [`docs/issues/`](./issues/); the ones
+  meant to stay open for contributors are marked **good first issue**.
+- Mislabelled, stale or missing statuses are bugs in their own right — see the
+  conventions at the end.
 
 ---
 
-## Known Issues (Resolved in v0.1.1) ✅
+## Done
 
-| ID | Summary |
-|---|---|
-| KI-004 | Mouse scroll wheel direction inverted — **fixed** (`RemoteScreen.tsx` inverts `deltaY`) |
-| KI-005 | Keyboard layout / Caps Lock mismatch — **fixed** (printable characters go through the `unicode` field; keyup is skipped) |
+**Phases 1–7 (v0.1.0)** — 22 tasks: protocol foundation, rendezvous, relay,
+session, input, the React frontend, and the first deployment. Details are in git
+history.
 
-Open issues live in `docs/KNOWN_ISSUES.md`: KI-003 (performance) and KI-006 (Ctrl+C / Ctrl+V not forwarded).
+**Shipped features:** H264/VP9/VP8/AV1 video via WebCodecs (R-11 tuning),
+keyboard and mouse input, audio (Opus via `AudioDecoder`, R-09), fullscreen
+(R-05), fit / 1:1 scaling (R-06), per-connection relay settings (R-03), hCaptcha
+(R-04), a debug overlay, and the "Remember password" opt-in (R-20).
 
----
+**Fixed issues:** KI-001 (10-second disconnect), KI-004 (scroll direction),
+KI-005 (keyboard case/layout). See `docs/KNOWN_ISSUES.md`.
 
-## Roadmap — Feature Work
-
-| ID | Priority | Feature | Status | Notes |
-|---|---|---|---|---|
-| R-03 | 🔴 High | User-configurable server (Advanced Options) | ✅ **Done** | Collapsible "Advanced" section in login form; fields for hbbs/hbbr/server key. localStorage persistence. Full gateway wiring. |
-| R-04 | 🔴 High | CAPTCHA on connect | ✅ **Done** | hCaptcha widget, server-side verification, `/config` endpoint. Enabled with `CAPTCHA_ENABLED=true` plus `HCAPTCHA_SITE_KEY`/`HCAPTCHA_SECRET_KEY` on the gateway (see `gateway/.env.example`). |
-| R-05 | 🔴 High | Full screen mode | ✅ **Done** | Fullscreen API, toolbar button, hides toolbar when active. Escape to exit. |
-| R-06 | 🔴 High | Canvas scaling / fit-to-window | ✅ **Done** | Fit (CSS aspect-ratio) / 1:1 native toggle. Preference persisted in localStorage (`rclient_fit`). |
-| R-07 | 🟡 Medium | Multi-connection manager | 🟨 **Partial** | Only one set of connection fields exists, persisted in localStorage; a new connect replaces the current session (the gateway holds one `Session` per browser socket). Real multi-connection support and saved-host cards are R-07b/R-07c. |
-| R-07b | 🟡 Medium | Past hosts cards | ❌ **Not started** | After a successful connection, save the host to a "Past hosts" section with cards (host ID + optional label + last connected timestamp). Clicking a card auto-fills the form (ID, password, and custom hbbs/hbbr/server key) and connects. Matching native client UX. |
-| R-07c | 🟡 Medium | Persist Advanced Options per connection | ❌ **Not started** | Prerequisite for R-07b and R-14b. Each saved connection must remember its custom hbbs/hbbr/server key alongside the host ID and password, so a user can have multiple connections with different relay servers. |
-| R-08 | 🟡 Medium | Session auto-reconnect | ❌ **Not started** | WebSocket drop triggers disconnect; no retry logic or exponential backoff. |
-| R-09 | 🟡 Medium | Audio streaming | ✅ **Done** | Host audio (Opus) is forwarded by the gateway (`audio_frame` → marker byte 5, plus `Misc.audio_format` → `{type:'audio_format'}`) and played in the browser by `web/src/video/audio.ts` using WebCodecs `AudioDecoder` + Web Audio scheduling. Requires `AudioDecoder`/`AudioContext` in the browser; without them video and input keep working and audio is skipped. Merged on `main`. |
-| R-10 | 🟡 Medium | Clipboard sync | ❌ **Not started** | Proto definitions exist (`Clipboard`). No handler in gateway or frontend. |
-| R-11 | 🟢 Low | FPS improvement | ✅ **Done** | 30fps request, `image_quality` tuning, `test_delay`/`target_bitrate`, `video_ack_required: false`. FPS now depends on host machine performance. |
-| R-12 | 🟢 Low | Multi-monitor support | ❌ **Not started** | Proto definitions exist (`SwitchDisplay`, `CaptureDisplays`). Gateway reads only `displays[0]`. No monitor selector UI. |
-| R-13 | 🟢 Low | Mobile touch input | ✅ **Done** | Mouse clicks work on Android. If issues surface, file a new KI. |
-| R-13b | 🟡 Medium | Mobile keyboard input | ❌ **Not started** | Touch/mouse works on mobile but there is no way to type on the remote machine from a mobile browser. Need an on-screen keyboard overlay or device keyboard forwarding. |
-| R-14 | 🟢 Low | File transfer | ❌ **Not started** | Proto definitions exist (`FileAction`, `FileResponse`). No handler in gateway or frontend. |
-| R-14b | 🟡 Medium | Demo defaults to public RustDesk servers | ✅ **Done (deployment)** | The repo's own `.env.example` still points at a self-hosted relay; the public demo is configured separately in `deploy/demo.env.example` with `HBBS_HOST`/`HBBR_HOST` = RustDesk's public servers, so a visitor needs only an ID and password. Visitors can still enter their own relay under Advanced Options. See `deploy/DEMO.md`. |
-| R-20 | 🔴 High | "Remember password" opt-in (privacy fix) | ✅ **Done** | The password used to be written to `localStorage` on every keystroke. It is now saved only when the user ticks "Remember password" (off by default), and only after a successful connection; unticking deletes it. See `web/src/utils/passwordStorage.ts` and the Privacy section of `README.md`. |
+**Deployment:** `docker-compose.yml` (from source), `docker-compose.prod.yml`
+(published images), the public demo at <https://rclient-demo.linkzy.dev> (R-14b),
+and the demo's stability settings (memory caps and log rotation, R-16/R-19 —
+partial: only the demo stack has them).
 
 ---
 
-## Roadmap — Deployment Stability
+## v0.2.0 — Community-ready
 
-Operational improvements for the host running the relay and rclient. Unaddressed, an undersized VPS can freeze under log bloat, stale WebSocket connections and memory pressure.
+Everything a stranger needs to trust and try the repo. Mostly Phase 1 leftovers.
 
-The relay containers (`hbbs`/`hbbr`) are set up outside this repository, so the notes below distinguish what this repo's compose files configure (gateway, web) from what belongs to the relay stack.
+| ID | What | Why it matters | Start at | Difficulty | Label |
+|---|---|---|---|---|---|
+| R-16 | Log rotation and healthchecks in the repo's own compose files | The demo is capped and healthchecked; a self-hoster's stack still has neither. | `docker-compose.yml`, `docker-compose.prod.yml` | easy | good first issue |
+| R-19 | Memory limits in the repo's own compose files | One runaway container can take down a small VPS. | `docker-compose.yml`, `docker-compose.prod.yml` | easy | help wanted |
+| R-17 | Structured logging (`level`, session id) | Grepping `[session]` across thousands of lines is the current debugging experience. | `gateway/src/server.ts`, `gateway/src/session.ts` | medium | help wanted |
+| R-18 | Firewall guidance for self-hosted relays | "Block scanners at the firewall" is one line with no instructions today. | new `docs/deployment/HARDENING.md` | easy | help wanted |
+| R-25 | Reverse-proxy examples (Caddy, Traefik, NPM) | A wrong WebSocket proxy looks like a gateway bug; the README has only a three-line Caddy snippet. | new `docs/deployment/REVERSE-PROXY.md` | easy | good first issue |
+| R-26 | Friendlier connect errors | Raw RustDesk strings appear in the form; the technical text belongs in the Debug Panel. | `web/src/hooks/useGateway.ts`, `ConnectForm.tsx` | easy | good first issue |
+| R-23 | Audio mute + volume slider | Audio plays at full volume with no control, though a `GainNode` already exists. | `web/src/video/audio.ts`, toolbar | easy | good first issue |
+| R-24 | Keyboard shortcut help overlay | Nothing in the app explains what is forwarded and what is not. | new `web/src/components/ShortcutHelp.tsx` | easy | good first issue |
 
-| ID | Priority | Task | Notes |
+**Not yet published in this milestone but relevant:** the test suite (vitest in
+both packages) and CI on pull requests are tracked in the project plan, not here;
+they land before v0.2.0 is tagged.
+
+---
+
+## v0.3.0 — Everyday remote desktop
+
+The things that make it feel like a real client rather than a demo.
+
+| ID | What | Why it matters | Start at | Difficulty | Label |
+|---|---|---|---|---|---|
+| R-08 | Session auto-reconnect | Any network blip ends the session and the user starts over. | `web/src/hooks/useGateway.ts` | medium | help wanted |
+| R-07c | Persist Advanced options per saved connection | Prerequisite for host cards; today there is one global set of relay overrides. | `web/src/components/ConnectForm.tsx`, new `web/src/utils/hosts.ts` | medium | help wanted |
+| R-07b | Saved hosts ("Past hosts" cards) | Retrying a machine means retyping its ID and relay. Passwords must follow the Remember-password rule. | `web/src/components/ConnectForm.tsx`, `web/src/utils/hosts.ts` | medium | help wanted |
+| R-10 | Clipboard sync | Copy/paste between browser and host does not exist; also the missing half of KI-006. | `gateway/src/session.ts` (proto `Clipboard`), `web/src/components/RemoteScreen.tsx` | hard | help wanted |
+| KI-006 | Forward common shortcuts (Ctrl+C, Ctrl+V, …) | Open bug; some shortcuts never reach the page, and copy/paste needs R-10. | `web/src/components/RemoteScreen.tsx`, `gateway/src/utils/keymap.ts` | medium | help wanted |
+| R-13b | Mobile keyboard input | Mouse/touch works on Android but there is no way to type. | `web/src/components/RemoteScreen.tsx` | medium | help wanted |
+
+---
+
+## v0.4.0 — Bigger features
+
+Large, protocol-heavy or design-heavy work. Discuss before starting.
+
+| ID | What | Why it matters | Start at | Difficulty | Label |
+|---|---|---|---|---|---|
+| R-14 | File transfer | Upload/download between browser and host (`FileAction`/`FileResponse` exist in the proto). | `gateway/src/session.ts`, new UI | hard | help wanted |
+| R-12 | Multi-monitor | The gateway reads only `displays[0]`; hosts with several screens are stuck on one. | `gateway/src/session.ts` (`handlePeerInfo`) | hard | help wanted |
+| R-21 | Internationalisation (i18n) | All UI strings are hardcoded English in JSX. | new `web/src/i18n/`, components | medium | help wanted |
+| R-22 | Themes (light/dark) | Colours are hardcoded in the CSS modules. | `web/src/**/*.module.css` | medium | good first issue |
+
+---
+
+## Good first issues — stay open for contributors
+
+These are deliberately **not** implemented in Phase 1. Each is self-contained,
+touches one or two files, and has acceptance criteria a reviewer can check
+without a RustDesk host. Full drafts in [`docs/issues/`](./issues/).
+
+| ID | Issue | File | Why it is a good first issue |
 |---|---|---|---|
-| R-15 | 🔴 High | Disable keystroke-level logging | **Done** — the verbose `sendLog(...)` call in `gateway/src/server.ts` (in the `key` branch) is commented out. The comment says to restore it for keyboard shortcut debugging (see KI-006). Keystroke events were producing most of the log volume. |
-| R-16 | 🟡 Medium | Persistent log storage with rotation | **Partial** — the public demo stack (`deploy/docker-compose.demo.yml`) sets `json-file` with `max-size: 10m`, `max-file: 3` (30 MB per container). The repo's `docker-compose.yml` / `docker-compose.prod.yml` and the relay stack still use the default unbounded driver. |
-| R-17 | 🟡 Medium | Structured logging for easier analysis | Tag all log lines with level (`INFO`/`WARN`/`ERROR`) and include `sessionId` / `targetId` in a consistent structured field, so `grep 'ERROR'` gives instant signal. |
-| R-18 | 🟡 Medium | Scanner blacklist | The relay is scanned by internet-wide crawlers. Block at the firewall or reverse-proxy level (`fail2ban` or equivalent). Low effort, reduces noise. |
-| R-19 | 🟡 Medium | Container memory limits | **Partial** — the demo stack caps `gateway` at 192 MB and `web` at 96 MB (`mem_limit`). The repo's `docker-compose.yml` / `docker-compose.prod.yml` have no limits yet, and neither do the relay containers (`hbbs`/`hbbr`), which belong to the relay stack's own compose file. |
+| R-16 | Log rotation + healthchecks | `docker-compose*.yml` | Copy the demo stack's proven settings. |
+| R-25 | Reverse-proxy examples | new `docs/deployment/REVERSE-PROXY.md` | Documentation plus config snippets. |
+| R-26 | Friendlier errors | `web/src/utils/errors.ts` (new), `useGateway.ts` | A small mapping table and a pure function. |
+| R-23 | Audio mute + volume | `web/src/video/audio.ts` | One component, one `GainNode`. |
+| R-24 | Shortcut help overlay | new `web/src/components/ShortcutHelp.tsx` | Pure UI, static content. |
+| R-22 | Theme toggle | `web/src/**/*.module.css`, `App.tsx` | CSS variables and a persisted preference. |
+| — | Screenshots for the docs | `docs/assets/` (new) | Needs a real session; coordinate with the maintainer. |
+
+`R-18`, `R-19` and everything in v0.3.0/v0.4.0 are `help wanted`: they need a real
+RustDesk host, protocol insight, or more than a day's work.
 
 ---
 
-## Notes for AI Agents
+## Conventions
+
+- **One issue per `R-xx`.** The issue title starts with the id: `R-08: reconnect
+  automatically after a network drop`.
+- **Milestones** are `v0.2.0 — Community-ready`, `v0.3.0 — Everyday remote
+  desktop`, `v0.4.0 — Bigger features`.
+- **Labels**: `enhancement` (or `bug` for KI-006), plus exactly one of
+  `good first issue` / `help wanted`, plus an `area:` label (see
+  `docs/issues/README.md`).
+- **Renumbering:** the roadmap ids `R-21`–`R-26` are new entries created with this
+  roadmap. `R-20` was the Remember-password fix, already shipped.
+- **Closing an item** means: the code is merged, `docs/TASKS.md` and
+  `docs/KNOWN_ISSUES.md` agree, and the issue is closed by the PR.
+
+## Notes for AI agents
 
 - Before starting any task, re-read `docs/AI_GUIDELINES.md` and `docs/PROTOCOL.md`
 - **Read `docs/KNOWN_ISSUES.md` before touching `session.ts`** — it has critical implementation notes
@@ -83,4 +127,3 @@ The relay containers (`hbbs`/`hbbr`) are set up outside this repository, so the 
 - **Never commit `.env` files** — use `.env.example` with placeholder values only
 - `npm run build` passes in `web/`; `npm run lint` currently fails on four pre-existing `react-hooks` errors (`RemoteScreen.tsx` writes refs during render; `ConnectForm.tsx` calls `setCaptchaToken` inside an effect). Fixing them is test/lint work, not part of a feature change.
 - The gateway's `lint` script cannot run yet: `eslint` is not a dependency of `gateway/package.json`. `npm run build` (plain `tsc`) is the check that works.
-
