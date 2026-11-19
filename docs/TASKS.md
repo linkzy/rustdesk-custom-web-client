@@ -49,9 +49,10 @@ Everything a stranger needs to trust and try the repo. Mostly Phase 1 leftovers.
 | R-23 | Audio mute + volume slider | Audio plays at full volume with no control, though a `GainNode` already exists. | `web/src/video/audio.ts`, toolbar | easy | good first issue |
 | R-24 | Keyboard shortcut help overlay | Nothing in the app explains what is forwarded and what is not. | new `web/src/components/ShortcutHelp.tsx` | easy | good first issue |
 
-**Not yet published in this milestone but relevant:** the test suite (vitest in
-both packages) and CI on pull requests are tracked in the project plan, not here;
-they land before v0.2.0 is tagged.
+**Already landed for this milestone** (not issues): the vitest suite in both
+packages (`npm test`, 24 gateway + 25 web), CI on pull requests
+(`.github/workflows/ci.yml`, lint → typecheck → test → build) and the lint fixes
+that make that pipeline green.
 
 ---
 
@@ -125,5 +126,5 @@ RustDesk host, protocol insight, or more than a day's work.
 - The most error-prone areas are: encryption (seqnum sync, nonce format), password hashing order, TestDelay echo direction (`from_client: false`), and `video_ack_required: false`
 - Keep the gateway stateful per session — each browser connection maps to exactly one relay connection
 - **Never commit `.env` files** — use `.env.example` with placeholder values only
-- `npm run build` passes in `web/`; `npm run lint` currently fails on four pre-existing `react-hooks` errors (`RemoteScreen.tsx` writes refs during render; `ConnectForm.tsx` calls `setCaptchaToken` inside an effect). Fixing them is test/lint work, not part of a feature change.
-- The gateway's `lint` script cannot run yet: `eslint` is not a dependency of `gateway/package.json`. `npm run build` (plain `tsc`) is the check that works.
+- `npm test`, `npm run typecheck`, `npm run lint` and `npm run build` all pass in both packages; CI runs the same four on every pull request and on `main`.
+- The suite pins the pure parts (hashing, nonces, framing, key mapping, storage rules); a real session still needs a RustDesk host and relay.

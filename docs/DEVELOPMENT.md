@@ -10,7 +10,7 @@ code; where something does not work, that is said plainly.
 
 | Requirement | Notes |
 |---|---|
-| Node.js 22+ | Both `Dockerfile`s build on `node:22-alpine`. No `engines` field or `.nvmrc` pins it — 22 is the version the images use. |
+| Node.js 22+ | `engines` at the repo root (`^22.0.0 \|\| >=24`), `.nvmrc` (`22`), both `Dockerfile`s (`node:22-alpine`) and CI all agree on Node 22. |
 | npm | Lockfiles exist in both packages, so `npm ci` works. |
 | A RustDesk host + relay | Only needed to exercise a real session (see [What works without a RustDesk host](#what-works-without-a-rustdesk-host)). |
 
@@ -20,12 +20,22 @@ Docker is optional: it is only needed for the local image builds at the bottom.
 
 ## 1. Install
 
+From the repository root:
+
+```bash
+npm run install:all      # npm ci in gateway/ then web/
+```
+
+or per package:
+
 ```bash
 cd gateway && npm ci
 cd ../web && npm ci
 ```
 
-Each package has its own `package-lock.json`; there is no workspace root.
+Each package has its own `package-lock.json`. The root `package.json` has no
+dependencies — it only forwards `test`, `typecheck`, `lint` and `build` to both
+packages. There is no npm workspace.
 
 ---
 
@@ -119,27 +129,39 @@ That is a config change in `web/`, not part of the default setup.
 
 ## 4. Checks
 
-| Command | State |
-|---|---|
-| `cd gateway && npm run build` | Passes (`tsc` → `dist/`). This is the working gateway check. |
-| `cd web && npm run build` | Passes (`tsc -b && vite build` → `dist/`). |
-| `cd web && npm run lint` | **Fails today** on four pre-existing `react-hooks` errors: `RemoteScreen.tsx` writes refs during render (3×), `ConnectForm.tsx` calls `setCaptchaToken` inside an effect. Not caused by the current changes; fixing them belongs with the test/lint work. |
-| `cd gateway && npm run lint` | **Cannot run**: the script is `eslint src --ext .ts`, but `eslint` is not a dependency of `gateway/package.json`. |
-
-### Tests
-
-There is no test runner configured in either package yet (no `test` script, no
-Vitest/Jest dependency). The one executable check is a manual protobuf
-round-trip:
+There is a root `package.json` with no dependencies that drives both packages, so
+from the repository root:
 
 ```bash
-cd gateway
-npx ts-node-dev --transpile-only src/utils/proto.test.ts
-# … [test] Round-trip OK ✅
+npm run install:all   # npm ci in gateway/ then web/
+npm run typecheck     # tsc in both
+npm run build         # tsc (gateway) + tsc -b && vite build (web)
+npm test              # vitest in both
+npm run lint          # eslint in both
 ```
 
-It loads `gateway/src/proto/*.proto`, encodes a `PunchHoleRequest`, decodes it and
-asserts the fields survive.
+Or run them per package (`cd gateway && npm test`). The same commands run in CI on
+every pull request and on `main` (`.github/workflows/ci.yml`), in this order:
+lint → typecheck → test → build.
+
+| Command | State today |
+|---|---|
+| `npm run lint` | Passes in both packages. |
+| `npm run typecheck` | Passes in both. |
+| `npm test` | Passes: 24 tests in `gateway/`, 25 in `web/`. |
+| `npm run build` | Passes in both packages. |
+
+### What the tests cover
+
+- **gateway/** (`vitest`, node): the password hash and nonce construction, the
+  sequence counter's pre-increment behaviour, the browser frame header, protobuf
+  round-trips and the key mapping (`gateway/src/utils/*.test.ts`).
+- **web/** (`vitest` + `jsdom`): frame parsing and codec strings, the
+  `localStorage` keys and server-config normalisation, the Remember-password rules,
+  and the friendly-error mapping (`web/src/**/*.test.ts`).
+
+None of them need a RustDesk host. What they cannot do is prove a real session
+works — see below.
 
 ### What works without a RustDesk host
 
@@ -150,9 +172,10 @@ with `Peer not available: OFFLINE — make sure the RustDesk app is running and
 connected to your server`, which the UI shows as a connect error.
 
 So changes to the protocol layer (`session.ts`, `rendezvous.ts`, `relay.ts`,
-`keymap.ts`) cannot be verified end to end from a bare clone: they need a host
-machine running RustDesk with a reachable relay. The plan for removing that
-dependency is a fake RustDesk host with a unit-test suite.
+`keymap.ts`) can only be verified end to end against a host machine running
+RustDesk with a reachable relay. The unit tests pin the pure parts (hashing,
+framing, key mapping); the session itself still needs the real thing. A fake
+RustDesk host is the plan for closing that gap.
 
 ---
 
