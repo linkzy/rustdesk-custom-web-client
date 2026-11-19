@@ -23,6 +23,7 @@ It consists of two components:
 | 0.5 | `docs/README.md` | Index of every document, routed by intent |
 | 1 | `docs/AI_GUIDELINES.md` | This file — orientation, conventions, pitfalls |
 | 1.5 | `docs/DEVELOPMENT.md` | Local setup without Docker, checks, image builds |
+| 1.6 | `docs/DEPLOYMENT.md` | Self-hosting: relay, HTTPS, operating, troubleshooting |
 | 2 | `docs/ARCHITECTURE.md` | System design, component relationships, data flow, gateway WS API, limitations |
 | 3 | `docs/PROTOCOL.md` | RustDesk protocol details (protobuf, encryption, codec, port map) |
 | 4 | `docs/TASKS.md` | Development task list with status — **check this to know what to work on** |

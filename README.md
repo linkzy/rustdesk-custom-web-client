@@ -66,9 +66,10 @@ docker compose -f docker-compose.prod.yml up -d
 Open the port from `WEB_PORT` (80 by default) — or put HTTPS in front of it, which
 WebCodecs requires. Then enter the remote machine's RustDesk ID and password.
 
-No relay yet? The [full setup guide](#deploying-it-yourself) starts one from
-scratch. Everything from zero: [`docs/DEVELOPMENT.md`](./docs/DEVELOPMENT.md) for
-running the code, [`docs/README.md`](./docs/README.md) for every document.
+No relay yet? [`docs/DEPLOYMENT.md`](./docs/DEPLOYMENT.md) starts one from scratch and
+covers HTTPS, operating and troubleshooting. For the code itself:
+[`docs/DEVELOPMENT.md`](./docs/DEVELOPMENT.md); for every document:
+[`docs/README.md`](./docs/README.md).
 
 ---
 
@@ -99,130 +100,26 @@ check its own support tables rather than a version number here.
 
 ## Deploying it yourself
 
-### 1. RustDesk on the machine you want to control
+The full guide — relay setup, every environment variable, HTTPS options, operating
+and troubleshooting — is in **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)**. The short
+version:
 
-1. Install [RustDesk](https://rustdesk.com/docs/en/client/windows-and-mac/) and open it.
-2. Note the **ID** and set a **password** — that is what you will type in rclient.
-3. **Settings → Network**: set the ID/relay server to your relay's address, and the
-   **Key** to the public key from step 2.
-4. Leave it running.
+1. **A host** with RustDesk installed, pointed at your relay (Settings → Network:
+   the relay address and its public key).
+2. **A relay** — yours, or a public one. rclient ships none.
+3. **rclient**:
 
-The host needs no port forwarding; it reaches the internet through your relay.
+   ```bash
+   cp .env.example .env      # HBBS_HOST, HBBR_HOST, SERVER_KEY
+   docker compose -f docker-compose.prod.yml up -d
+   ```
 
-### 2. A relay (hbbs + hbbr)
+4. **TLS in front** of the `web` container (Cloudflare Tunnel or any
+   reverse proxy) — browsers only expose WebCodecs over HTTPS.
 
-Skip this if you already run one. rclient does not ship a relay: it connects to
-whatever `HBBS_HOST` / `HBBR_HOST` / `SERVER_KEY` you point it at.
-
-On your VPS, write a compose file of your own — this one is not part of the repo:
-
-```yaml
-# relay-compose.yml
-services:
-  hbbs:
-    image: rustdesk/rustdesk-server:latest
-    command: hbbs
-    container_name: hbbs
-    ports:
-      - "21115:21115"
-      - "21116:21116"
-      - "21116:21116/udp"
-      - "21118:21118"
-    volumes:
-      - ./data:/root
-    restart: unless-stopped
-    depends_on: [hbbr]
-  hbbr:
-    image: rustdesk/rustdesk-server:latest
-    command: hbbr
-    container_name: hbbr
-    ports:
-      - "21117:21117"
-      - "21119:21119"
-    volumes:
-      - ./data:/root
-    restart: unless-stopped
-```
-
-```bash
-mkdir -p data && docker compose -f relay-compose.yml up -d
-docker logs hbbs 2>&1 | grep "Key:"     # the server public key
-```
-
-Paste that key into RustDesk's **Network → Key** field on every host, and into
-`SERVER_KEY` below.
-
-### 3. rclient
-
-| Compose file | What it does |
-|---|---|
-| `docker-compose.prod.yml` | Runs the published `ghcr.io/linkzy/rclient-*` images. No build. |
-| `docker-compose.yml` | Builds `gateway/` and `web/` locally. For development or a fork. |
-
-Both publish only the `web` container (on `${WEB_PORT:-80}`) and keep the gateway
-internal on port 4000. Copy `.env.example` to `.env` and fill it in:
-
-```env
-HBBS_HOST=your-rustdesk-server.com
-HBBS_WS_PORT=21118
-HBBR_HOST=your-rustdesk-server.com
-HBBR_WS_PORT=21119
-SERVER_KEY=your-server-public-key-base64
-WEB_PORT=80
-```
-
-```bash
-docker compose -f docker-compose.prod.yml up -d
-```
-
-`HBBS_HOST`/`HBBR_HOST` must be reachable **from the gateway container**: the
-compose files put it on its own bridge network, so a relay on the same host is not
-reachable as `hbbs` by name — use its IP or DNS name.
-
-Building from source needs Node 22 (`npm run install:all`, then the compose file);
-[`docs/DEVELOPMENT.md`](./docs/DEVELOPMENT.md) has the details, including that the
-Vite dev server proxies `/ws` but **not** `/config`.
-
-### 4. HTTPS
-
-Browsers only expose WebCodecs over a secure context, so put TLS in front. A
-Cloudflare Tunnel needs no open ports:
-
-```bash
-cloudflared tunnel login
-cloudflared tunnel create rclient
-cloudflared tunnel route dns rclient rclient.yourdomain.com
-```
-
-```yaml
-# /etc/cloudflared/config.yml
-tunnel: <your-tunnel-id>
-credentials-file: /root/.cloudflared/<your-tunnel-id>.json
-ingress:
-  - hostname: rclient.yourdomain.com
-    service: http://localhost:80
-  - service: http_status:404
-```
-
-```bash
-sudo cloudflared service install && sudo systemctl enable --now cloudflared
-```
-
-Any reverse proxy works as well — Caddy is one line:
-
-```
-rclient.yourdomain.com {
-  reverse_proxy localhost:80
-}
-```
-
-A common failure is a proxy that drops the WebSocket upgrade: the page loads and
-`/ws` closes immediately. The gateway must stay internal; never expose port 4000.
-
-### 5. Connect
-
-Open your URL, enter the machine ID and password, press Connect. If it hangs after
-"connected", the relay is the thing to check — see the demo note above.
+Never publish the gateway port (4000): it holds the session keys. A reverse proxy
+that drops the WebSocket upgrade is the most common failure; the page loads and
+`/ws` closes immediately.
 
 ---
 
@@ -321,6 +218,31 @@ mapping, storage rules); a real session still needs a RustDesk host.
 
 **Can I use it on my phone?**
 Partly. Mouse and touch work; typing on the remote machine does not yet.
+
+**It says "wrong password" but I am sure it is right.**
+That is the RustDesk password on the host, not a login — rclient has no accounts.
+Check it in RustDesk itself; hosts can have both a permanent and a one-time password.
+
+**It says the machine is offline.**
+RustDesk is not running on the host, or it is pointing at a different relay than
+`HBBS_HOST`. Both ends must use the same server and key.
+
+**It connects, then sits at "waiting for image".**
+Rendezvous worked but the relay stream did not — usually the relay's `21117`/`21119`
+ports are unreachable. This is exactly the public-relay problem the demo has.
+The step-by-step is in [`docs/DEPLOYMENT.md`](./docs/DEPLOYMENT.md#troubleshooting).
+
+**No video at all.**
+Either the browser lacks WebCodecs `VideoDecoder`, or the page is not on HTTPS.
+The browser console logs the codec the decoder tried to initialise.
+
+**No audio, but video is fine.**
+The browser lacks WebCodecs `AudioDecoder`, or the host sends more than two
+channels. Audio is skipped without breaking the session.
+
+**Why does it need HTTPS?**
+Browsers only expose WebCodecs in a secure context. `localhost` counts; a LAN IP
+over plain HTTP does not.
 
 **How do I report a bug or ask a question?**
 Bugs: the [bug report form](https://github.com/linkzy/rustdesk-custom-web-client/issues/new?template=bug_report.yml).

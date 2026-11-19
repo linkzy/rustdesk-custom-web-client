@@ -73,6 +73,7 @@ Read [`docs/AI_GUIDELINES.md`](./docs/AI_GUIDELINES.md) before touching `gateway
 |---|---|
 | Every doc, and what to read for what | [`docs/README.md`](./docs/README.md) |
 | Local setup without Docker | [`docs/DEVELOPMENT.md`](./docs/DEVELOPMENT.md) |
+| Self-hosting (relay, HTTPS, troubleshooting) | [`docs/DEPLOYMENT.md`](./docs/DEPLOYMENT.md) |
 | Orientation, conventions, pitfalls | [`docs/AI_GUIDELINES.md`](./docs/AI_GUIDELINES.md) |
 | System design, gateway WS API, limitations | [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) |
 | RustDesk protocol details | [`docs/PROTOCOL.md`](./docs/PROTOCOL.md) |
