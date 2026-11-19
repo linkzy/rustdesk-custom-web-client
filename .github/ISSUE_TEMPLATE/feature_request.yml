@@ -1,0 +1,65 @@
+name: Feature request
+description: Something rclient should do differently
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Feature requests are welcome. Before opening one, check
+        [`docs/TASKS.md`](https://github.com/linkzy/rustdesk-custom-web-client/blob/main/docs/TASKS.md)
+        — the roadmap lists what is already planned, and
+        [`docs/KNOWN_ISSUES.md`](https://github.com/linkzy/rustdesk-custom-web-client/blob/main/docs/KNOWN_ISSUES.md)
+        lists known bugs. Ask first for anything large.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: Describe the situation, not the solution. What are you trying to do that rclient makes hard today?
+      placeholder: "I connect from a tablet, and there is no way to type on the remote machine."
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you would like to happen
+      description: Your idea for the behaviour. Rough sketches are fine.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you considered
+      description: Including workarounds you use today, or features in other clients.
+    validations:
+      required: false
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Video / performance
+        - Audio
+        - Keyboard / mouse input
+        - Mobile
+        - Connection / relay configuration
+        - UI / usability
+        - Deployment / Docker
+        - Documentation
+        - Protocol support (file transfer, clipboard, multi-monitor, …)
+        - Other
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I checked docs/TASKS.md and this is not already planned.
+          required: true
+        - label: I searched open issues for a duplicate.
+          required: true

@@ -53,7 +53,7 @@ Open issues live in `docs/KNOWN_ISSUES.md`: KI-003 (performance) and KI-006 (Ctr
 | R-13 | 🟢 Low | Mobile touch input | ✅ **Done** | Mouse clicks work on Android. If issues surface, file a new KI. |
 | R-13b | 🟡 Medium | Mobile keyboard input | ❌ **Not started** | Touch/mouse works on mobile but there is no way to type on the remote machine from a mobile browser. Need an on-screen keyboard overlay or device keyboard forwarding. |
 | R-14 | 🟢 Low | File transfer | ❌ **Not started** | Proto definitions exist (`FileAction`, `FileResponse`). No handler in gateway or frontend. |
-| R-14b | 🟡 Medium | Demo defaults to public RustDesk servers | ❌ **Not started** | Blocked by R-07c. Change the default `.env` `HBBS_HOST`/`HBBR_HOST` to point to the public RustDesk relay servers so the demo works out of the box for random visitors. The owner sets their custom relay in Advanced Options, which persists via R-07c. |
+| R-14b | 🟡 Medium | Demo defaults to public RustDesk servers | ✅ **Done (deployment)** | The repo's own `.env.example` still points at a self-hosted relay; the public demo is configured separately in `deploy/demo.env.example` with `HBBS_HOST`/`HBBR_HOST` = RustDesk's public servers, so a visitor needs only an ID and password. Visitors can still enter their own relay under Advanced Options. See `deploy/DEMO.md`. |
 | R-20 | 🔴 High | "Remember password" opt-in (privacy fix) | ✅ **Done** | The password used to be written to `localStorage` on every keystroke. It is now saved only when the user ticks "Remember password" (off by default), and only after a successful connection; unticking deletes it. See `web/src/utils/passwordStorage.ts` and the Privacy section of `README.md`. |
 
 ---
@@ -67,10 +67,10 @@ The relay containers (`hbbs`/`hbbr`) are set up outside this repository, so the 
 | ID | Priority | Task | Notes |
 |---|---|---|---|
 | R-15 | 🔴 High | Disable keystroke-level logging | **Done** — the verbose `sendLog(...)` call in `gateway/src/server.ts` (in the `key` branch) is commented out. The comment says to restore it for keyboard shortcut debugging (see KI-006). Keystroke events were producing most of the log volume. |
-| R-16 | 🟡 Medium | Persistent log storage with rotation | Switch the Docker log driver from `json-file` (unbounded) to `local` or `journald` with `max-size=10m`, `max-file=3`; or mount a volume and write logs to a file with external rotation. Applies to both the relay stack and this repo's compose services. Prevents log growth from consuming disk/memory. |
+| R-16 | 🟡 Medium | Persistent log storage with rotation | **Partial** — the public demo stack (`deploy/docker-compose.demo.yml`) sets `json-file` with `max-size: 10m`, `max-file: 3` (30 MB per container). The repo's `docker-compose.yml` / `docker-compose.prod.yml` and the relay stack still use the default unbounded driver. |
 | R-17 | 🟡 Medium | Structured logging for easier analysis | Tag all log lines with level (`INFO`/`WARN`/`ERROR`) and include `sessionId` / `targetId` in a consistent structured field, so `grep 'ERROR'` gives instant signal. |
 | R-18 | 🟡 Medium | Scanner blacklist | The relay is scanned by internet-wide crawlers. Block at the firewall or reverse-proxy level (`fail2ban` or equivalent). Low effort, reduces noise. |
-| R-19 | 🟡 Medium | Container memory limits | Set memory limits on every container: `hbbs`, `hbbr`, `gateway` and `nginx`. In this repo that means adding `deploy.resources.limits.memory` (or `mem_limit`) to the `gateway` and `web` services in `docker-compose.yml` / `docker-compose.prod.yml`; the relay limits belong to the relay stack's own compose file. Prevents a single container's OOM from destabilising the whole host. |
+| R-19 | 🟡 Medium | Container memory limits | **Partial** — the demo stack caps `gateway` at 192 MB and `web` at 96 MB (`mem_limit`). The repo's `docker-compose.yml` / `docker-compose.prod.yml` have no limits yet, and neither do the relay containers (`hbbs`/`hbbr`), which belong to the relay stack's own compose file. |
 
 ---
 

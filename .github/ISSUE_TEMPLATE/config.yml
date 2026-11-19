@@ -1,0 +1,22 @@
+# Issue chooser configuration.
+#
+# Maintainers: GitHub Discussions are not enabled on this repository yet
+# (the API reports has_discussions: false), so questions route to an issue search
+# filtered by the `question` label. Once Discussions are turned on
+# (Settings → General → Features), replace the first contact link below with:
+#
+#   - name: Questions, ideas and "how do I…"
+#     url: https://github.com/linkzy/rustdesk-custom-web-client/discussions
+#     about: Ask here instead of opening a bug report.
+#
+blank_issues_enabled: false
+contact_links:
+  - name: Questions, ideas and "how do I…"
+    url: https://github.com/linkzy/rustdesk-custom-web-client/issues?q=is%3Aissue+label%3Aquestion
+    about: Ask with the `question` label instead of opening a bug report. (Discussions are not enabled yet; until then, questions live here.)
+  - name: Read the documentation first
+    url: https://github.com/linkzy/rustdesk-custom-web-client/blob/main/docs/README.md
+    about: Setup, architecture, protocol, known issues — routed by what you want to do.
+  - name: Try the public demo
+    url: https://rclient-demo.linkzy.dev
+    about: A separate instance for trying rclient with your own machine ID and password.
