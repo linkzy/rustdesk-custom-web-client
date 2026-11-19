@@ -287,6 +287,8 @@ Read by the gateway at startup (`gateway/src/rendezvous.ts`, `relay.ts`, `server
 
 `GATEWAY_PORT` can be changed, but `web/nginx.conf` proxies `/ws` and `/config` to `gateway:4000`; change there too if you do.
 
+Note: `.env.example` also lists `DOCKER_USERNAME`, which nothing in the project reads (images are published to `ghcr.io`, not Docker Hub).
+
 The "Advanced options" section of the connect form lets a user override the rendezvous host, relay host and server key **per connection** from the browser; those overrides are stored in `localStorage` (see the Privacy section).
 
 ---
