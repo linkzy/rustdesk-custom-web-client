@@ -328,7 +328,7 @@ docker compose -f docker-compose.prod.yml up -d
 | Instance | What it is |
 |---|---|
 | `rclient.linkzy.dev` | The owner's private production instance, on its own VPS with its own relay. Not a public demo. |
-| `rclient-demo.linkzy.dev` | A **public demo** on a separate VPS, so visitors never reach the owner's relay (rule PROJ-003). It defaults to **RustDesk's public servers** (`rs-ny.rustdesk.com`, ports 21118/21119), so anyone can try it with just a machine ID and password; visitors can still point it at their own relay under Advanced options. |
+| `rclient-demo.linkzy.dev` | A **public demo** on a separate VPS, so visitors never reach the owner's relay (rule PROJ-003). It runs its **own** RustDesk relay pair (`hbbs`+`hbbr` as `rclient-demo-hbbs`/`rclient-demo-hbbr`), reachable at the DNS-only name `relay-demo.linkzy.dev` on ports 21115–21119. Visitors set **ID Server = `relay-demo.linkzy.dev`** and the demo's key in their RustDesk before connecting (see [`../deploy/DEMO.md`](../deploy/DEMO.md)); they can still point at their own relay under Advanced options instead. |
 
 The demo is deployed from `deploy/` (`docker-compose.demo.yml`,
 `demo.env.example`, `cloudflared/`) with its own compose project, network, tunnel

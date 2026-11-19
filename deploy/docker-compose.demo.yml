@@ -13,11 +13,56 @@
 #     DOCKER_CONFIG=/home/demo/.docker docker compose up -d
 #
 # Ports: the web UI listens on 127.0.0.1 only; the gateway publishes nothing.
-# cloudflared is the single public entry point.
+# cloudflared is the single public entry point for the web UI.
+#
+# hbbs/hbbr (the demo's OWN relay pair) use host networking, because RustDesk
+# must see real peer IPs and binds 21115-21119 itself. They are reachable
+# directly at relay-demo.linkzy.dev (DNS-only record), NOT through Cloudflare.
+# Never point them at the owner's production relay or reuse its key.
 
 name: rclient-demo
 
 services:
+  # --- The demo's own RustDesk relay -------------------------------------
+  # Public on relay-demo.linkzy.dev: 21115/tcp, 21116/tcp+udp, 21117/tcp,
+  # 21118/tcp (web client id server), 21119/tcp (web client relay).
+  hbbs:
+    image: rustdesk/rustdesk-server:latest
+    container_name: rclient-demo-hbbs
+    # -r tells peers which relay to use; keep in sync with relay-demo.linkzy.dev.
+    command: hbbs -r relay-demo.linkzy.dev:21117
+    network_mode: host
+    volumes:
+      - ./relay-data:/root
+    restart: unless-stopped
+    mem_limit: 64m
+    memswap_limit: 64m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
+
+  hbbr:
+    image: rustdesk/rustdesk-server:latest
+    container_name: rclient-demo-hbbr
+    command: hbbr
+    network_mode: host
+    volumes:
+      - ./relay-data:/root
+    restart: unless-stopped
+    mem_limit: 64m
+    memswap_limit: 64m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
+
   gateway:
     image: ghcr.io/linkzy/rclient-gateway:latest
     container_name: rclient-demo-gateway

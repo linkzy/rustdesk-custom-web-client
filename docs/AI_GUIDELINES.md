@@ -124,7 +124,7 @@ KI-004 (scroll direction) and KI-005 (keyboard caps/layout) are fixed in the cod
 
 **Deployments:**
 - The repository ships `docker-compose.yml` (builds from source) and `docker-compose.prod.yml` (runs the `ghcr.io` images). There is no `docker-compose.infra.yml` or `docker-compose.app.yml` in the repo; a relay stack is set up separately by whoever hosts RustDesk.
-- `deploy/` holds the **public demo** stack (separate VPS, separate tunnel, public RustDesk relays by default). Its runbook is `deploy/DEMO.md`; do not confuse it with the owner's production instance.
+- `deploy/` holds the **public demo** stack (separate VPS, separate tunnel, and its **own** `hbbs`+`hbbr` relay pair on a DNS-only hostname). Its runbook is `deploy/DEMO.md`; do not confuse it with the owner's production instance.
 - Public access in both deployments goes through Cloudflare Tunnel in front of the `web` container. No server addresses or keys are published here — read them from the deployment's own `.env`.
 
 ---
