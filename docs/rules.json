@@ -59,17 +59,16 @@
       "citations": [
         {
           "source": "HUM",
-          "location": "Reply to the Phase 1 plan proposal",
-          "excerpt": "the least thing i want it to be is miss leading"
+          "location": "Reply to the Phase 1 plan proposal"
         }
       ],
       "imposedBy": "HMN",
       "confirmation": "checked-by-agent",
-      "status": "missing",
-      "current": "Diverges: README.md states \"Passwords are never stored — rclient only uses the password during the RustDesk handshake and never logs or persists it\", while web/src/components/ConnectForm.tsx persists rclient_password in localStorage.",
+      "status": "partial",
+      "current": "T10 removed the known false claims: the README's 'passwords are never stored' security section now documents the Remember-password opt-in and the localStorage contents; audio (R-09) is documented as merged and working instead of 'in progress'; KI-004/KI-005 now read 'fixed' in both TASKS.md and KNOWN_ISSUES.md; the hardcoded VPS IP and the non-existent docker-compose.infra.yml/app.yml references are replaced with a generic description of docker-compose.yml and docker-compose.prod.yml; PROTOCOL/ARCHITECTURE statements about video headers, mouse mask, codec strings, TestDelay direction and LoginRequest options were corrected against the code. Remaining drift risk: docs still describe RustDesk internals that no test asserts, and a first-run screenshot/title claim is left to T15/T16.",
       "check": "Compare each README/docs claim about behaviour with the code; the password section must match rule PROJ-002.",
-      "updatedAt": 1795113256812,
-      "updatedBy": "core"
+      "updatedAt": 1795116632958,
+      "updatedBy": "scribe"
     },
     {
       "id": "PROJ-002",
@@ -80,17 +79,16 @@
       "citations": [
         {
           "source": "HUM",
-          "location": "Answer to Q1",
-          "excerpt": "Opt-in 'Remember password' checkbox (default off)"
+          "location": "Answer to Q1"
         }
       ],
       "imposedBy": "HMN",
       "confirmation": "found",
-      "status": "missing",
-      "current": "Diverges: ConnectForm always writes the password to localStorage (key rclient_password) on connect.",
-      "check": "Connect with the box unticked and reload: no password in localStorage; tick it, connect, reload: password restored.",
-      "updatedAt": 1795113256820,
-      "updatedBy": "core"
+      "status": "done",
+      "current": "Implemented in web/src/utils/passwordStorage.ts + ConnectForm.tsx: the password is held in memory for the connection attempt and written to localStorage ('rclient_password') only after a successful connect and only when the 'Remember password' checkbox ('rclient_remember_password') is ticked; the box is off by default. Unticking deletes the saved password immediately; a failed attempt persists nothing. Verified in a browser against a fake gateway (unticked/ticked/un-ticked/failed cases) and with npm run build.",
+      "check": "web/src/components/ConnectForm.tsx (checkbox + toggleRemember), web/src/App.tsx (commit on status === 'connected'), web/src/utils/passwordStorage.ts. Manual: connect unticked → no rclient_password in localStorage; tick → saved after success; untick → removed.",
+      "updatedAt": 1795116637303,
+      "updatedBy": "scribe"
     },
     {
       "id": "PROJ-003",
@@ -106,12 +104,12 @@
         }
       ],
       "imposedBy": "HMN",
-      "confirmation": "found",
-      "status": "missing",
-      "current": "Diverges: README and docs point at rclient.linkzy.dev as the live demo; the demo instance at rclient-demo.linkzy.dev is not deployed yet (task T18). The owner's production instance stays at rclient.linkzy.dev.",
-      "check": "Open https://rclient-demo.linkzy.dev — it serves the demo UI, and its relay defaults are public RustDesk servers, not the owner's relay. https://rclient.linkzy.dev keeps serving production.",
-      "updatedAt": 1795114690342,
-      "updatedBy": "core"
+      "confirmation": "checked-by-agent",
+      "status": "partial",
+      "current": "Diverges: the README describes rclient.linkzy.dev as the author's personal production deployment (T10 wording). The public demo on the Contabo VPS under its own subdomain does not exist yet — it is T18 in the plan.",
+      "check": "Open https://rclient-demo.linkzy.dev — UI loads over HTTPS, /config answers {\"captchaEnabled\":false}. On the VPS: docker ps shows only rclient-demo-* added; systemctl is-active rclient-demo-tunnel.service. Production rclient.linkzy.dev still 200 and independent.",
+      "updatedAt": 1795116650970,
+      "updatedBy": "scribe"
     },
     {
       "id": "PROJ-004",
@@ -149,9 +147,9 @@
       "imposedBy": "HMN",
       "confirmation": "found",
       "status": "partial",
-      "current": "README has no hero visual yet (T15 adds screenshots); T20 is blocked until Phase 2.",
-      "updatedAt": 1795114695551,
-      "updatedBy": "core"
+      "current": "README.md currently has no hero visual at all (no screenshot, no GIF); the live-demo link sits under the tagline. Static screenshots were never committed to this branch. T20 (blocked) holds the replacement plan: a Playwright-recorded GIF/video once the Phase 2 fake RustDesk host exists.",
+      "updatedAt": 1795116647987,
+      "updatedBy": "scribe"
     }
   ]
 }
