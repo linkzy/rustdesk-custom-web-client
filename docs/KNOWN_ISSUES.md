@@ -155,20 +155,20 @@ Control keys (arrows, Enter, Tab, etc.) keep using `control_key`.
 
 **Status:** Open  
 **Severity:** Medium — copy/paste and common shortcuts don't work  
-**Affected component:** `gateway/src/session.ts`, `web/src/components/RemoteScreen.tsx`
+**Affected component:** `gateway/src/utils/keymap.ts`, `web/src/components/RemoteScreen.tsx`
 
 ### Symptoms
-- Pressing Ctrl+C, Ctrl+V, Ctrl+A, Ctrl+Z, and similar browser-native shortcuts in the remote screen do nothing or trigger the browser's own action instead of being forwarded to the remote machine
+- Pressing Ctrl+C, Ctrl+V, Ctrl+A, Ctrl+Z, and similar shortcuts in the remote screen does nothing (or triggers the browser's own action instead of reaching the remote machine)
 - Text cannot be copied from or pasted into the remote session using standard shortcuts
 
 ### Likely Root Cause
-Browser keyboard events for common shortcuts (Ctrl+C, Ctrl+V, etc.) are intercepted by the browser before reaching the JavaScript event handlers, or the gateway's key event builder doesn't properly encode modifier+key combinations as RustDesk `KeyEvent` messages. The `buildKeyPayload` function in `session.ts` may be dropping or mis-encoding these combinations.
+Browser keyboard events for common shortcuts are often consumed by the browser before the page sees them, and copy/paste additionally needs the clipboard channel (R-10, not implemented). For the shortcuts that do reach the page, `buildKeyPayload` (`gateway/src/utils/keymap.ts`) already sends Ctrl/Alt combinations as `chr` + `keyCode`, so the remaining gap is the browser side and clipboard support rather than the encoding itself.
 
 ### Next Steps
-- Audit `buildKeyPayload` for modifier handling with common shortcut keys
-- Log the raw `KeyboardEvent` and the resulting `KeyEvent` payload for Ctrl+C
-- Consider using `preventDefault()` on the canvas for known shortcut combinations
-- Compare with native RustDesk `KeyEvent` output for the same keystroke
+- Confirm in a browser which shortcuts actually reach the listener (the canvas calls `preventDefault()` on keydown/keyup)
+- Capture the raw `KeyboardEvent` and the resulting `KeyEvent` payload for Ctrl+C on the remote host
+- Clipboard sync (R-10) is a prerequisite for real copy/paste; the shortcut forwarding can be checked separately
+- Remember the verbose keystroke log in `gateway/src/server.ts` is commented out (R-15) — restore it temporarily when debugging this
 
 ---
 
