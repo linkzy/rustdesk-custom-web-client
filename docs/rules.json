@@ -64,10 +64,10 @@
       ],
       "imposedBy": "HMN",
       "confirmation": "checked-by-agent",
-      "status": "partial",
-      "current": "The T10 truth pass fixed the false password claim, stale audio/KI statuses, the hardcoded IP, the TestDelay pitfall and the compose file names, and added AGENTS.md. Remaining: README advertises rclient.linkzy.dev as the live demo (PROJ-003) and its demo-screenshots/hero visual are still missing (T15, T20).",
-      "check": "Read README.md and docs/ against the code; nothing stated that the code does not do.",
-      "updatedAt": 1795117035163,
+      "status": "done",
+      "current": "Met for Phase 1: the password claim is now true (opt-in, off by default); audio and KI statuses agree across docs; no server IPs or keys in the docs; the README's demo line carries the degraded warning; tests/CI counts and commands match reality after the T11/T13 corrections.",
+      "check": "Grep README/docs for claims about stored data, features, checks and deployment, and verify each against code/config; run npm run lint/test in both packages and compare with what the docs state.",
+      "updatedAt": 1795120839419,
       "updatedBy": "core"
     },
     {
