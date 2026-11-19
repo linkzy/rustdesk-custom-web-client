@@ -62,11 +62,12 @@ workaround.
   beyond the life of a connection, and the demo has no database.
 - **One visitor per WebSocket.** A browser tab holds one session; the gateway
   drops the previous session when a new connect arrives on the same socket.
-- **The page title is a placeholder.** The demo currently serves
-  `<title>web</title>` (from `web/index.html`), so a browser tab and search
-  results say "web" instead of "rclient". T16 (first-run polish, owned by
-  scribe) fixes this in `web/` — no demo change is needed, the demo picks it up
-  on its next image pull.
+- **The page title is a placeholder until the demo is redeployed.** The demo
+  currently serves `<title>web</title>` because it still runs a pre-0.2.0 web
+  image. T16 fixed the title in `web/index.html`
+  (`<title>rclient — RustDesk web client</title>`), and the fix is in the
+  published `0.2.0`/`latest` web image; the demo picks it up on its next
+  redeploy (see "Redeploying" above). No code change is needed.
 
 ## Architecture
 
@@ -179,8 +180,40 @@ docker compose ps
 
 Rollback: pin the image tags in `docker-compose.yml` to the previous tag and run
 `docker compose up -d` again. The published images are tagged `latest` plus every
-commit SHA (`ghcr.io/linkzy/rclient-web:<sha>`), so a known-good commit is always
-available.
+commit SHA (`ghcr.io/linkzy/rclient-web:sha-<short>`), so a known-good commit is
+always available.
+
+### Pin to a release instead of `latest`
+
+`docker-compose.demo.yml` follows `:latest`, so a redeploy picks up the newest
+build. To freeze the demo on a known release, pin both images:
+
+```yaml
+image: ghcr.io/linkzy/rclient-gateway:0.2.0
+image: ghcr.io/linkzy/rclient-web:0.2.0
+```
+
+A tag push publishes `0.2.0`, `0.2` and `sha-<short>` alongside `latest` on
+**both** images (see [`docs/RELEASING.md`](../docs/RELEASING.md)). The two
+images are separate builds and one can finish after the other, so a release tag
+can exist on the gateway before it exists on the web image. Check both before
+pinning:
+
+```sh
+for repo in rclient-gateway rclient-web; do
+  tok=$(curl -s "https://ghcr.io/token?scope=repository:linkzy/$repo:pull&service=ghcr.io" \
+    | python3 -c 'import sys,json;print(json.load(sys.stdin)["token"])')
+  curl -s -o /dev/null -w "$repo:0.2.0 -> %{http_code}\n" \
+    -H "Authorization: Bearer $tok" \
+    -H 'Accept: application/vnd.oci.image.index.v1+json,application/vnd.docker.distribution.manifest.list.v2+json,application/vnd.docker.distribution.manifest.v2+json' \
+    "https://ghcr.io/v2/linkzy/$repo/manifests/0.2.0"
+done
+# 200 = published, 404 = not there yet
+```
+
+Every commit build also publishes a `sha-<short>` tag (e.g. `sha-c40a9ca`) and a
+bare 40-character commit tag; either pins one exact image. Prefer a `sha-` tag
+over `:latest` when you need to know precisely what is running.
 
 ## Operating it
 
