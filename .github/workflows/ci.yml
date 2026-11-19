@@ -8,6 +8,7 @@ on:
 permissions:
   contents: read
 
+# A new push to a PR cancels its previous run; runs on main are never cancelled.
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -26,7 +27,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: 22 # same major as .nvmrc and the Dockerfiles
           cache: npm
           cache-dependency-path: gateway/package-lock.json
 
@@ -58,7 +59,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: 22 # same major as .nvmrc and the Dockerfiles
           cache: npm
           cache-dependency-path: web/package-lock.json
 
