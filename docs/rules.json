@@ -188,9 +188,9 @@
       "imposedBy": "HMN",
       "confirmation": "checked-by-agent",
       "status": "done",
-      "current": "Met by CI as of T13: .github/workflows/ci.yml runs lint, typecheck, test and build for gateway and web on every pull request and on push to main, and no failing step is commented out or skipped. web's lint step is expected to be red until the 4 pre-existing react-hooks findings are fixed (fixes prepared and assigned); the run is reported as failing, not hidden.",
-      "updatedAt": 1795119224184,
-      "updatedBy": "ci",
+      "current": "CI (.github/workflows/ci.yml) runs lint, typecheck, test and build for both packages on pull requests and push to main, with no step removed or softened; gateway lint is green. Web lint is still red on 4 pre-existing react-hooks errors, so the first CI run is honest red until scribe applies the two prepared fixes in T16.",
+      "updatedAt": 1795119327378,
+      "updatedBy": "core",
       "check": "Open the latest CI run for main or a PR: both jobs must show their lint, typecheck, test and build steps present; a failing step shows red rather than being removed."
     }
   ]
