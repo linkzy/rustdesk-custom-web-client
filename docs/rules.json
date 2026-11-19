@@ -106,10 +106,10 @@
       "imposedBy": "HMN",
       "confirmation": "checked-by-agent",
       "status": "partial",
-      "current": "Diverges: the README describes rclient.linkzy.dev as the author's personal production deployment (T10 wording). The public demo on the Contabo VPS under its own subdomain does not exist yet — it is T18 in the plan.",
+      "current": "Done: demo deployed at https://rclient-demo.linkzy.dev on the Contabo VPS as its own stack, tunnel and key (verified over HTTPS: UI 200, /config 200, /ws upgrades). Production rclient.linkzy.dev untouched. Open caveat: public relay hbbr ports are refused from that host, so real sessions may fail until a reachable relay is chosen (operator investigating).",
       "check": "Open https://rclient-demo.linkzy.dev — UI loads over HTTPS, /config answers {\"captchaEnabled\":false}. On the VPS: docker ps shows only rclient-demo-* added; systemctl is-active rclient-demo-tunnel.service. Production rclient.linkzy.dev still 200 and independent.",
-      "updatedAt": 1795116650970,
-      "updatedBy": "scribe"
+      "updatedAt": 1795116737286,
+      "updatedBy": "core"
     },
     {
       "id": "PROJ-004",
