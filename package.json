@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "description": "Self-hosted web client for RustDesk",
+  "engines": {
+    "node": "^22.0.0 || >=24"
+  },
   "scripts": {
     "install:all": "npm --prefix gateway ci && npm --prefix web ci",
     "test": "npm --prefix gateway test && npm --prefix web test",
