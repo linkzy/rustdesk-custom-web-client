@@ -19,8 +19,9 @@ It consists of two components:
 
 | Order | File | What it covers |
 |---|---|---|
-| 1 | `docs/AI_GUIDELINES.md` | This file — orientation |
-| 2 | `docs/ARCHITECTURE.md` | System design, component relationships, data flow |
+| 0 | `AGENTS.md` | Short entry point: what the project is, commands, top protocol pitfalls |
+| 1 | `docs/AI_GUIDELINES.md` | This file — orientation, conventions, pitfalls |
+| 2 | `docs/ARCHITECTURE.md` | System design, component relationships, data flow, gateway WS API |
 | 3 | `docs/PROTOCOL.md` | RustDesk protocol details (protobuf, encryption, codec, port map) |
 | 4 | `docs/TASKS.md` | Development task list with status — **check this to know what to work on** |
 | 5 | `docs/KNOWN_ISSUES.md` | Confirmed bugs with root cause analysis — **read before touching session.ts** |
@@ -31,11 +32,12 @@ It consists of two components:
 
 ```
 rclient/
+├── AGENTS.md           ← short entry point (read this first)
 ├── docs/               ← AI documentation (you are here)
 ├── gateway/            ← Node.js backend (RustDesk protocol bridge)
 │   ├── src/
-│   │   ├── proto/      ← .proto files + generated TypeScript types
-│   │   ├── utils/      ← protobuf helpers, framing, encryption
+│   │   ├── proto/      ← .proto files
+│   │   ├── utils/      ← protobuf helpers, key mapping
 │   │   ├── rendezvous.ts  ← hbbs WebSocket client
 │   │   ├── relay.ts       ← hbbr WebSocket client
 │   │   ├── session.ts     ← per-connection session state
@@ -44,13 +46,14 @@ rclient/
 │   └── tsconfig.json
 ├── web/                ← React frontend
 │   ├── src/
-│   │   ├── components/ ← ConnectForm, RemoteScreen
+│   │   ├── components/ ← ConnectForm, RemoteScreen, DebugPanel, StatsOverlay
 │   │   ├── hooks/      ← useGateway (WebSocket connection)
-│   │   ├── video/      ← WebCodecs decoder
-│   │   └── input/      ← mouse/keyboard capture
+│   │   ├── utils/      ← passwordStorage (Remember password)
+│   │   └── video/      ← WebCodecs video decoder + Opus audio player
 │   ├── package.json
 │   └── vite.config.ts
-├── docker-compose.yml
+├── docker-compose.yml       ← builds from source
+├── docker-compose.prod.yml  ← runs the ghcr.io images
 ├── .env.example
 └── README.md
 ```
@@ -63,16 +66,19 @@ rclient/
 The gateway always uses `force_relay: true` in `PunchHoleRequest`. This avoids NAT traversal complexity. Since the user runs their own relay server, this is acceptable and simpler.
 
 ### 2. Codec Preference
-The gateway advertises only **VP9 and H264** in `SupportedDecoding`. These are widely supported by the browser WebCodecs API. H264 is preferred because it is hardware-decoded in most browsers.
+The gateway advertises **VP8, VP9, H264 and AV1** in `SupportedDecoding`, preferring H264 (`prefer: 2`). H264 is preferred because it is hardware-decoded in most browsers. The browser-side decoder supports all four (`web/src/video/decoder.ts`).
 
 ### 3. Encryption on Gateway
 The RustDesk session encryption (XSalsa20-Poly1305, `tweetnacl` secretbox) is handled entirely in the **gateway**. The browser receives plaintext video frames and sends plaintext input. The gateway is the only component that needs to hold encryption keys.
 
 ### 4. Gateway WebSocket API
-The gateway exposes a single WebSocket endpoint. The browser sends JSON control messages and receives binary video frames. See `docs/ARCHITECTURE.md` for the message format.
+The gateway exposes one HTTP server that answers `GET /config` and upgrades to WebSocket. The browser sends JSON control messages and receives JSON status messages plus binary video/audio frames. See `docs/ARCHITECTURE.md` for the message format.
 
 ### 5. No UDP
 The gateway connects to `hbbs`/`hbbr` exclusively via WebSocket (ports 21118/21119). No UDP code is needed in the gateway.
+
+### 6. Password handling
+The password is only persisted in the browser when the user opts in with "Remember password" (off by default), and only after a successful connection. The gateway hashes it and never stores or logs it. See the Privacy section of `README.md`; the rules are in `web/src/utils/passwordStorage.ts`.
 
 ---
 
@@ -85,6 +91,7 @@ The gateway connects to `hbbs`/`hbbr` exclusively via WebSocket (ports 21118/211
 - **Protobuf**: Use `protobufjs` to load `.proto` files directly at runtime (no codegen step required during development)
 - **Encryption**: Use `tweetnacl` (`nacl.box`, `nacl.secretbox`) — do not use any other crypto library for RustDesk message encryption
 - **No hardcoded secrets**: All server addresses, keys, and passwords come from environment variables or runtime parameters
+- **No secrets in logs or storage**: the password reaches the gateway over the WebSocket, is hashed, and is never logged or written to disk. The browser stores it only behind the "Remember password" opt-in (`web/src/utils/passwordStorage.ts`) — keep it that way.
 
 ---
 
@@ -98,19 +105,23 @@ The gateway connects to `hbbs`/`hbbr` exclusively via WebSocket (ports 21118/211
 | `HBBR_WS_PORT` | hbbr WebSocket port | `21119` |
 | `SERVER_KEY` | RustDesk server public key (base64) | `<from hbbs logs>` |
 | `GATEWAY_PORT` | Port gateway listens on for browser WS | `4000` |
+| `CAPTCHA_ENABLED` | Require an hCaptcha token before connecting | `false` |
+| `HCAPTCHA_SITE_KEY` | hCaptcha site key, exposed via `GET /config` | `<from hcaptcha.com>` |
+| `HCAPTCHA_SECRET_KEY` | hCaptcha secret, used in server-side verification | `<from hcaptcha.com>` |
 
-## Project Status (as of v0.1.0)
+## Project Status
 
-The project is **working and deployed**. All 22 original development tasks are complete. The client successfully connects to a self-hosted RustDesk relay, streams H264 video at 3–16 FPS, and forwards keyboard/mouse input with near-zero latency.
+The project works and is deployed by its author. All 22 original development tasks are complete. The client connects to a self-hosted RustDesk relay, decodes H264 video in the browser, plays host audio (Opus) when the browser supports WebCodecs `AudioDecoder`, and forwards keyboard/mouse input.
 
-**Current known bugs** (open, fix pending):
-- KI-006 — Common keyboard shortcuts (Ctrl+C, Ctrl+V, etc.) not forwarded to remote machine. See `docs/KNOWN_ISSUES.md` for details.
+**Current known bugs** (open, fix pending) — see `docs/KNOWN_ISSUES.md`:
+- KI-003 — performance on a self-hosted relay is comparable to public relays; under investigation
+- KI-006 — Common keyboard shortcuts (Ctrl+C, Ctrl+V, etc.) not forwarded to remote machine
 
-**Active deployment:**
-- Relay: Oracle Cloud VPS, São Paulo (137.131.214.48)
-- Client: `https://rclient.linkzy.dev` (Cloudflare Tunnel)
-- Gateway: `rclient-gateway` Docker container on same VPS
-- Two compose files: `docker-compose.infra.yml` (hbbs+hbbr) and `docker-compose.app.yml` (gateway+web)
+KI-004 (scroll direction) and KI-005 (keyboard caps/layout) are fixed in the code — do not re-open them without evidence.
+
+**Deployments:**
+- The repository ships `docker-compose.yml` (builds from source) and `docker-compose.prod.yml` (runs the `ghcr.io` images). There is no `docker-compose.infra.yml` or `docker-compose.app.yml` in the repo; a relay stack is set up separately by whoever hosts RustDesk.
+- Public access in the author's deployment goes through a Cloudflare Tunnel in front of the `web` container. No server addresses or keys are published here — read them from the deployment's own `.env`.
 
 ---
 
