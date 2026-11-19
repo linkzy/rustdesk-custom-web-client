@@ -16,6 +16,7 @@ fresh context.)
 | **Work on the protocol** | [`PROTOCOL.md`](./PROTOCOL.md) — framing, handshake, encryption, video/audio/input messages |
 | **Know what is finished** | [`TASKS.md`](./TASKS.md) — milestone roadmap; [`issues/`](./issues/) has the ready-to-paste issues |
 | **Check a bug I hit** | [`KNOWN_ISSUES.md`](./KNOWN_ISSUES.md) — confirmed bugs, root causes, fixed ones included |
+| **Ship a release** | [`RELEASING.md`](./RELEASING.md) — bump the manifests, changelog, tag, image tags, GitHub Release |
 | **Point an AI agent at the repo** | [`../AGENTS.md`](../AGENTS.md) |
 | **Run the public demo** | [`../deploy/DEMO.md`](../deploy/DEMO.md) — its host, tunnel, redeploy and limits |
 
@@ -30,6 +31,7 @@ fresh context.)
 | [`ARCHITECTURE.md`](./ARCHITECTURE.md) | Diagram and component responsibilities, the full gateway WebSocket API (`/config`, `ping`/`pong`, `gw_stats`, `audio_format`, binary frame markers), captcha and per-connection server overrides, connection lifecycle, deployment, security, known limitations. |
 | [`PROTOCOL.md`](./PROTOCOL.md) | RustDesk protocol reference: ports, proto files, wire framing, rendezvous with `force_relay`, the secure handshake, password hashing, video and audio frames, input events. |
 | [`TASKS.md`](./TASKS.md) | Completed phases, the milestone roadmap, and the good-first-issue set. |
+| [`RELEASING.md`](./RELEASING.md) | The release checklist: bump the three manifests, changelog entry, checks, tag, what image tags the tag publishes, GitHub Release, and the badge that goes with it. |
 | [`issues/`](./issues/) | Ready-to-paste GitHub issues and the pinned roadmap post, with publishing order. |
 | [`KNOWN_ISSUES.md`](./KNOWN_ISSUES.md) | Each confirmed bug with symptoms, root cause and the fix (or the next steps when open). |
 | [`AI_GUIDELINES.md`](./AI_GUIDELINES.md) | Conventions, environment variables, design decisions and 13 protocol pitfalls. Overlaps `../AGENTS.md`; this one goes deeper. |

@@ -45,7 +45,8 @@ an issue first.
    read [`docs/KNOWN_ISSUES.md`](./docs/KNOWN_ISSUES.md) too.
 3. **Run the checks.** From the repo root: `npm run lint`, `npm run typecheck`,
    `npm test` and `npm run build`. All four pass today and CI runs the same four in
-   that order on every PR, so a red check means something in your change.
+   that order on every PR, so a red check means something in your change — fix the
+   cause rather than relaxing the rule or reformatting around it.
 
 > **Protocol work needs a real RustDesk host.** There is no fake host yet, so
 > changes to `session.ts`, `rendezvous.ts`, `relay.ts` or `keymap.ts` can only be

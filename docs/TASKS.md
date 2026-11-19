@@ -126,5 +126,6 @@ RustDesk host, protocol insight, or more than a day's work.
 - The most error-prone areas are: encryption (seqnum sync, nonce format), password hashing order, TestDelay echo direction (`from_client: false`), and `video_ack_required: false`
 - Keep the gateway stateful per session — each browser connection maps to exactly one relay connection
 - **Never commit `.env` files** — use `.env.example` with placeholder values only
-- `npm test`, `npm run typecheck`, `npm run lint` and `npm run build` all pass in both packages; CI runs the same four on every pull request and on `main`.
+- `npm test`, `npm run typecheck`, `npm run lint` and `npm run build` all pass in both packages; CI runs the same four on every pull request and on `main` (`lint` is real work now: `gateway/eslint.config.mjs` exists and web's four pre-existing `react-hooks` errors were fixed in code, not suppressed).
 - The suite pins the pure parts (hashing, nonces, framing, key mapping, storage rules); a real session still needs a RustDesk host and relay.
+- `docs/RELEASING.md` is the release checklist: bump, changelog, tag, images, GitHub Release.
