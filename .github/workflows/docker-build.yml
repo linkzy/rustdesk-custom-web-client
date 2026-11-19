@@ -30,7 +30,7 @@ jobs:
         uses: docker/setup-qemu-action@v3
 
       - name: Build and push gateway
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: ./gateway
           push: true
@@ -42,7 +42,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Build and push web
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: ./web
           push: true
