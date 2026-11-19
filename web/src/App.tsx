@@ -56,7 +56,7 @@ function App() {
       {isConnected ? (
         <>
           {!isFullscreen && (
-            <div className={styles.toolbar}>
+            <div className={styles.toolbar} role="toolbar" aria-label="Session controls">
               <span className={styles.toolbarTitle}>rclient</span>
               <span className={styles.toolbarInfo}>
                 {state.remoteWidth}×{state.remoteHeight} · {state.codec?.toUpperCase()}
@@ -65,15 +65,18 @@ function App() {
                 className={`${styles.toolbarBtn} ${fitToWindow ? styles.toolbarBtnActive : ''}`}
                 onClick={toggleFit}
                 title={fitToWindow ? 'Switch to 1:1 (native resolution)' : 'Switch to Fit (scale to window)'}
+                aria-pressed={fitToWindow}
+                aria-label={fitToWindow ? 'Fit to window, on' : 'Fit to window, off'}
               >
-                {fitToWindow ? '⊡ Fit' : '1:1'}
+                <span aria-hidden="true">{fitToWindow ? '⊡ Fit' : '1:1'}</span>
               </button>
               <button
                 className={styles.toolbarBtn}
                 onClick={toggleFullscreen}
                 title="Fullscreen"
+                aria-label="Enter fullscreen"
               >
-                ⛶ Fullscreen
+                <span aria-hidden="true">⛶ Fullscreen</span>
               </button>
               <button className={styles.disconnectBtn} onClick={controls.disconnect}>
                 Disconnect

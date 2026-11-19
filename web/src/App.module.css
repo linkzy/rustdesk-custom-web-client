@@ -67,6 +67,13 @@
   background: #2563eb;
 }
 
+/* Keyboard focus on the toolbar: visible, and not clipped by the bar. */
+.toolbarBtn:focus-visible,
+.disconnectBtn:focus-visible {
+  outline: 2px solid #60a5fa;
+  outline-offset: 2px;
+}
+
 /* Fullscreen: fills entire viewport, no toolbar */
 .screenFullscreen {
   position: fixed;

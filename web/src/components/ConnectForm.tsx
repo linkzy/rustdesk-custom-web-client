@@ -6,6 +6,7 @@ import {
   dropPasswordIfNotOptedIn,
   stagePasswordAttempt,
 } from '../utils/passwordStorage';
+import { friendlyError } from '../utils/errors';
 import {
   LS_ID_KEY,
   LS_HBBS_KEY,
@@ -136,6 +137,9 @@ export function ConnectForm({ onConnect, onDisconnect, status, error, showDebug,
   const isConnecting = status === 'connecting';
   const captchaRequired = gwConfig?.captchaEnabled && !captchaToken;
   const connectDisabled = isConnecting || !targetId.trim() || !!captchaRequired;
+  // The raw error stays in the Debug Panel; the form gets a short sentence and a
+  // next step instead of RustDesk's own wording.
+  const friendly = friendlyError(error);
 
   return (
     <div className={styles.container}>
@@ -146,10 +150,11 @@ export function ConnectForm({ onConnect, onDisconnect, status, error, showDebug,
       </div>
 
       {!isConnected ? (
-        <form className={styles.form} onSubmit={handleSubmit}>
+        <form className={styles.form} onSubmit={handleSubmit} aria-label="Connect to a RustDesk machine">
           <div className={styles.field}>
-            <label className={styles.label}>Device ID</label>
+            <label className={styles.label} htmlFor="rclient-device-id">Device ID</label>
             <input
+              id="rclient-device-id"
               className={styles.input}
               type="text"
               placeholder="Enter RustDesk ID"
@@ -157,17 +162,21 @@ export function ConnectForm({ onConnect, onDisconnect, status, error, showDebug,
               onChange={(e) => { setTargetId(e.target.value); save(LS_ID_KEY, e.target.value); }}
               disabled={isConnecting}
               autoFocus
+              autoComplete="off"
+              spellCheck={false}
             />
           </div>
           <div className={styles.field}>
-            <label className={styles.label}>Password</label>
+            <label className={styles.label} htmlFor="rclient-password">Password</label>
             <input
+              id="rclient-password"
               className={styles.input}
               type="password"
               placeholder="Connection password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               disabled={isConnecting}
+              autoComplete="off"
             />
             <label
               className={styles.checkboxLabel}
@@ -185,39 +194,52 @@ export function ConnectForm({ onConnect, onDisconnect, status, error, showDebug,
           </div>
 
           {/* Advanced options */}
-          <button type="button" className={styles.advancedToggle} onClick={toggleAdv}>
-            <span>{advOpen ? '▾' : '▸'}</span> Advanced options
+          <button
+            type="button"
+            className={styles.advancedToggle}
+            onClick={toggleAdv}
+            aria-expanded={advOpen}
+            aria-controls="rclient-advanced"
+          >
+            <span aria-hidden="true">{advOpen ? '▾' : '▸'}</span> Advanced options
           </button>
           {advOpen && (
-            <div className={styles.advancedSection}>
+            <div className={styles.advancedSection} id="rclient-advanced">
               <p className={styles.advancedHint}>
                 Override the server defaults. Leave blank to use the gateway's built-in server.
               </p>
               <div className={styles.field}>
-                <label className={styles.label}>HBBS Host (rendezvous)</label>
+                <label className={styles.label} htmlFor="rclient-hbbs">HBBS Host (rendezvous)</label>
                 <input
+                  id="rclient-hbbs"
                   className={styles.input}
                   type="text"
                   placeholder="e.g. myserver.com:21118"
                   value={hbbsHost}
                   onChange={(e) => { setHbbsHost(e.target.value); save(LS_HBBS_KEY, e.target.value); }}
                   disabled={isConnecting}
+                  autoComplete="off"
+                  spellCheck={false}
                 />
               </div>
               <div className={styles.field}>
-                <label className={styles.label}>HBBR Host (relay)</label>
+                <label className={styles.label} htmlFor="rclient-hbbr">HBBR Host (relay)</label>
                 <input
+                  id="rclient-hbbr"
                   className={styles.input}
                   type="text"
                   placeholder="e.g. myserver.com:21119"
                   value={hbbrHost}
                   onChange={(e) => { setHbbrHost(e.target.value); save(LS_HBBR_KEY, e.target.value); }}
                   disabled={isConnecting}
+                  autoComplete="off"
+                  spellCheck={false}
                 />
               </div>
               <div className={styles.field}>
-                <label className={styles.label}>Server Key</label>
+                <label className={styles.label} htmlFor="rclient-server-key">Server Key</label>
                 <input
+                  id="rclient-server-key"
                   className={styles.input}
                   type="text"
                   placeholder="base64 public key"
@@ -247,22 +269,35 @@ export function ConnectForm({ onConnect, onDisconnect, status, error, showDebug,
             className={styles.button}
             type="submit"
             disabled={connectDisabled}
+            aria-busy={isConnecting}
           >
             {isConnecting ? (
-              <><span className={styles.spinner} /> Connecting…</>
+              <><span className={styles.spinner} aria-hidden="true" /> Connecting…</>
             ) : (
               'Connect'
             )}
           </button>
           {(status === 'error' || status === 'disconnected') && (
-            <div className={styles.statusBadge} data-status={status}>
-              {status === 'error' ? `❌ ${error ?? 'Connection failed'}` : '⚠️ Disconnected'}
+            <div
+              className={styles.statusBadge}
+              data-status={status}
+              role="alert"
+              aria-live="polite"
+            >
+              {status === 'error' ? (
+                <>
+                  <span className={styles.errorTitle}>❌ {friendly.title}</span>
+                  <span className={styles.errorHint}>{friendly.hint}</span>
+                </>
+              ) : (
+                '⚠️ Disconnected'
+              )}
             </div>
           )}
         </form>
       ) : (
         <div className={styles.connectedPanel}>
-          <div className={styles.statusBadge} data-status="connected">✅ Connected</div>
+          <div className={styles.statusBadge} data-status="connected" role="status">✅ Connected</div>
           <button className={`${styles.button} ${styles.disconnectButton}`} onClick={onDisconnect}>
             Disconnect
           </button>

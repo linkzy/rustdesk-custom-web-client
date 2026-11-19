@@ -62,11 +62,25 @@
 
 .input:focus {
   border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.35);
 }
 
 .input:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* Visible keyboard focus for every interactive element on this screen.
+   :focus-visible keeps it off mouse clicks. */
+.button:focus-visible,
+.advancedToggle:focus-visible,
+.checkbox:focus-visible {
+  outline: 2px solid #60a5fa;
+  outline-offset: 3px;
+}
+
+.checkbox:focus-visible {
+  outline-offset: 2px;
 }
 
 .button {
@@ -127,6 +141,25 @@
 .statusBadge[data-status="error"] { color: #f87171; border: 1px solid #ef4444; }
 .statusBadge[data-status="disconnected"] { color: #fbbf24; border: 1px solid #f59e0b; }
 .statusBadge[data-status="connected"] { color: #4ade80; border: 1px solid #22c55e; }
+
+/* Error badge: a short title, then the next step in quieter type. */
+.statusBadge[data-status="error"] {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  text-align: left;
+}
+
+.errorTitle {
+  color: #f87171;
+  font-weight: 600;
+}
+
+.errorHint {
+  color: #cbd5e1;
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
 
 
 .advancedToggle {
