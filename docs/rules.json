@@ -106,9 +106,9 @@
       "imposedBy": "HMN",
       "confirmation": "checked-by-agent",
       "status": "partial",
-      "current": "Done: demo deployed at https://rclient-demo.linkzy.dev on the Contabo VPS as its own stack, tunnel and key (verified over HTTPS: UI 200, /config 200, /ws upgrades). Production rclient.linkzy.dev untouched. Open caveat: public relay hbbr ports are refused from that host, so real sessions may fail until a reachable relay is chosen (operator investigating).",
-      "check": "Open https://rclient-demo.linkzy.dev — UI loads over HTTPS, /config answers {\"captchaEnabled\":false}. On the VPS: docker ps shows only rclient-demo-* added; systemctl is-active rclient-demo-tunnel.service. Production rclient.linkzy.dev still 200 and independent.",
-      "updatedAt": 1795116737286,
+      "current": "Done: demo live at https://rclient-demo.linkzy.dev (own stack, tunnel and key on the Contabo VPS); repo homepage set to it; production rclient.linkzy.dev untouched and no longer advertised as the demo once README moves to the demo URL (T15). Open caveat: public relay hbbr ports were refused from that host, so real sessions may fail until a reachable relay is chosen.",
+      "check": "GitHub repo homepage and README demo link point at https://rclient-demo.linkzy.dev; https://rclient.linkzy.dev remains the owner's production instance and is not advertised as the demo.",
+      "updatedAt": 1795117760141,
       "updatedBy": "core"
     },
     {
