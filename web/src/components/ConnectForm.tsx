@@ -1,8 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import styles from './ConnectForm.module.css';
+import {
+  loadPasswordState,
+  setRememberPasswordEnabled,
+  dropPasswordIfNotOptedIn,
+  stagePasswordAttempt,
+} from '../utils/passwordStorage';
 
 const LS_ID_KEY      = 'rclient_target_id';
-const LS_PW_KEY      = 'rclient_password';
 const LS_HBBS_KEY    = 'rclient_hbbs_host';
 const LS_HBBR_KEY    = 'rclient_hbbr_host';
 const LS_SRVKEY_KEY  = 'rclient_server_key';
@@ -44,7 +49,11 @@ interface ConnectFormProps {
 
 export function ConnectForm({ onConnect, onDisconnect, status, error, showDebug, onShowDebugChange }: ConnectFormProps) {
   const [targetId, setTargetId]   = useState(() => localStorage.getItem(LS_ID_KEY)   ?? '');
-  const [password, setPassword]   = useState(() => localStorage.getItem(LS_PW_KEY)   ?? '');
+  // The password is only read back from localStorage when the user opted in with
+  // "Remember password"; the preference itself is remembered across visits.
+  const [initialPassword] = useState(loadPasswordState);
+  const [rememberPassword, setRememberPassword] = useState(initialPassword.remember);
+  const [password, setPassword]   = useState(initialPassword.password);
   const [hbbsHost, setHbbsHost]   = useState(() => localStorage.getItem(LS_HBBS_KEY) ?? '');
   const [hbbrHost, setHbbrHost]   = useState(() => localStorage.getItem(LS_HBBR_KEY) ?? '');
   const [serverKey, setServerKey] = useState(() => localStorage.getItem(LS_SRVKEY_KEY) ?? '');
@@ -55,6 +64,12 @@ export function ConnectForm({ onConnect, onDisconnect, status, error, showDebug,
   const captchaRendered = useRef(false);
 
   const save = (key: string, val: string) => localStorage.setItem(key, val);
+
+  // Drop any password left behind by an earlier version (or a previous opt-in)
+  // when this browser is not opted in.
+  useEffect(() => {
+    dropPasswordIfNotOptedIn();
+  }, []);
 
   // Fetch gateway config (captcha settings) on mount
   useEffect(() => {
@@ -102,6 +117,14 @@ export function ConnectForm({ onConnect, onDisconnect, status, error, showDebug,
     localStorage.setItem(LS_ADV_KEY, String(next));
   };
 
+  const toggleRemember = () => {
+    const next = !rememberPassword;
+    setRememberPassword(next);
+    // Opting out forgets any saved password right away; opting in only takes
+    // effect on the next successful connection.
+    setRememberPasswordEnabled(next);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!targetId.trim()) return;
@@ -109,6 +132,9 @@ export function ConnectForm({ onConnect, onDisconnect, status, error, showDebug,
     if (hbbsHost.trim())  cfg.hbbsHost  = hbbsHost.trim();
     if (hbbrHost.trim())  cfg.hbbrHost  = hbbrHost.trim();
     if (serverKey.trim()) cfg.serverKey = serverKey.trim();
+    // Nothing is written to localStorage here — the password is only persisted
+    // once the connection has actually succeeded (see App.tsx).
+    stagePasswordAttempt(password);
     onConnect(
       targetId.trim(),
       password,
@@ -151,9 +177,22 @@ export function ConnectForm({ onConnect, onDisconnect, status, error, showDebug,
               type="password"
               placeholder="Connection password"
               value={password}
-              onChange={(e) => { setPassword(e.target.value); save(LS_PW_KEY, e.target.value); }}
+              onChange={(e) => setPassword(e.target.value)}
               disabled={isConnecting}
             />
+            <label
+              className={styles.checkboxLabel}
+              title="Saves the password in this browser's local storage. Leave it unticked on shared computers."
+            >
+              <input
+                type="checkbox"
+                className={styles.checkbox}
+                checked={rememberPassword}
+                onChange={toggleRemember}
+                disabled={isConnecting}
+              />
+              Remember password
+            </label>
           </div>
 
           {/* Advanced options */}

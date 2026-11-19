@@ -4,6 +4,7 @@ import { ConnectForm } from './components/ConnectForm';
 import { RemoteScreen } from './components/RemoteScreen';
 import { DebugPanel } from './components/DebugPanel';
 import { StatsOverlay } from './components/StatsOverlay';
+import { commitPasswordAfterConnect, discardPasswordAttempt } from './utils/passwordStorage';
 import styles from './App.module.css';
 
 function App() {
@@ -26,6 +27,13 @@ function App() {
     document.addEventListener('fullscreenchange', onChange);
     return () => document.removeEventListener('fullscreenchange', onChange);
   }, []);
+
+  // The password is persisted only after a successful connection, and only
+  // when the user ticked "Remember password" in the form.
+  useEffect(() => {
+    if (state.status === 'connected') commitPasswordAfterConnect();
+    else if (state.status === 'error') discardPasswordAttempt();
+  }, [state.status]);
 
   const toggleFullscreen = useCallback(() => {
     if (document.fullscreenElement) {
