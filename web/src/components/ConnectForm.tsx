@@ -101,13 +101,12 @@ export function ConnectForm({ onConnect, onDisconnect, status, error, showDebug,
     }
   }, [gwConfig]);
 
-  // Reset captcha after each connection attempt
-  useEffect(() => {
-    if ((status === 'error' || status === 'disconnected') && gwConfig?.captchaEnabled) {
-      window.hcaptcha?.reset();
-      setCaptchaToken(null);
-    }
-  }, [status, gwConfig]);
+  // Reset the captcha after a connection attempt: hCaptcha tokens are
+  // single-use, so the widget has to be solved again before the next try.
+  const resetCaptcha = () => {
+    window.hcaptcha?.reset();
+    setCaptchaToken(null);
+  };
 
   const toggleAdv = () => {
     const next = !advOpen;
@@ -131,6 +130,10 @@ export function ConnectForm({ onConnect, onDisconnect, status, error, showDebug,
     // once the connection has actually succeeded (see App.tsx).
     stagePasswordAttempt(password);
     onConnect(targetId.trim(), password, cfg, captchaToken ?? undefined);
+    // That token is now spent: drop it so the next attempt needs a fresh
+    // challenge (and Connect stays disabled until then). Doing it here instead
+    // of in a status effect avoids a cascading render.
+    if (captchaToken) resetCaptcha();
   };
 
   const isConnected  = status === 'connected';
