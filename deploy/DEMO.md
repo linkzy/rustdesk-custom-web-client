@@ -62,6 +62,11 @@ workaround.
   beyond the life of a connection, and the demo has no database.
 - **One visitor per WebSocket.** A browser tab holds one session; the gateway
   drops the previous session when a new connect arrives on the same socket.
+- **The page title is a placeholder.** The demo currently serves
+  `<title>web</title>` (from `web/index.html`), so a browser tab and search
+  results say "web" instead of "rclient". T16 (first-run polish, owned by
+  scribe) fixes this in `web/` — no demo change is needed, the demo picks it up
+  on its next image pull.
 
 ## Architecture
 
@@ -333,9 +338,10 @@ machine ID and go". It is honest and reliable, but it is a different demo.
 1. **Now:** keep the public defaults and label the demo as **degraded /
    best-effort** rather than advertising a working session. That is what it is
    today, and it costs nothing.
-2. **If a reliably-working demo is wanted:** take option C, and document the
-   two-step setup for the visitor (install RustDesk → set ID Server + Key) on the
-   demo landing page. Verify with a real peer before advertising it.
+2. **If a reliably-working demo is wanted:** take option C — the runbook below
+   has the concrete plan — and document the two-step setup for the visitor
+   (install RustDesk → set ID Server + Key) on the demo landing page. Verify with
+   a real peer before advertising it.
 3. **Do not** deploy an `hbbr` alone (option B): it looks like a fix and is not.
 4. Tell RustDesk users the demo's status honestly in the README (T15) — do not
    claim "connect in one click" while the public relay is down.
@@ -348,6 +354,209 @@ for p in 21116 21118 21117 21119; do
     && echo "$p open" || echo "$p refused"
 done
 ```
+
+## If the owner chooses an own relay pair — runbook
+
+Written so someone who has never touched this host can do it. **Nothing here is
+deployed**; it runs only after the owner picks option C. Budget ~20 minutes.
+
+### 0. What you are building
+
+```
+visitor's RustDesk  ──21116/21117──>  hbbs + hbbr (demo-owned, this VPS)
+visitor's browser  ──HTTPS──>  rclient-demo.linkzy.dev  ──>  demo gateway
+                                                                  │
+                                          ws to the SAME hbbs/hbbr ┘
+```
+
+Both the browser and the remote machine must be on the **same**
+`hbbs`. That is the whole point: the public `hbbs` cannot route a session to a
+relay we own, so we move both peers onto ours.
+
+### 1. DNS — request one **DNS-only** name
+
+Ask the owner for a record like:
+
+| Name | Type | Value | Proxy |
+| --- | --- | --- | --- |
+| `relay-demo.linkzy.dev` | `A` | the VPS IPv4 address | **DNS only (grey cloud)** |
+
+The grey cloud is mandatory. `rclient-demo.linkzy.dev` is proxied (orange
+cloud), and Cloudflare's proxy only speaks HTTP(S) on 80/443 — RustDesk's raw
+TCP/UDP on 21115–21119 would never reach the host (verified: `21116` on the
+proxied name is refused). Keep the web UI on the proxied name and only RustDesk
+traffic on the DNS-only one.
+
+Check it resolves to the VPS directly, not to a Cloudflare address:
+
+```sh
+dig +short relay-demo.linkzy.dev @1.1.1.1     # must be the VPS IP
+```
+
+### 2. Ports that must be open inbound
+
+On the VPS, in any provider firewall **and** host firewall (this host currently
+has `ufw` inactive, so only the provider panel matters):
+
+| Port | Proto | Purpose |
+| --- | --- | --- |
+| `21115` | TCP | NAT type test |
+| `21116` | **TCP and UDP** | ID registration + heartbeat (UDP) and TCP hole punching |
+| `21117` | TCP | relay (`hbbr`) |
+| `21118` | TCP | ID server for the web client (our gateway) |
+| `21119` | TCP | relay for the web client (our gateway) |
+
+`21114` is Pro-only and not needed. Verify from **outside** the host (not from
+the VPS itself), e.g. from a laptop:
+
+```sh
+for p in 21115 21116 21117 21118 21119; do
+  timeout 5 bash -c "exec 3<>/dev/tcp/relay-demo.linkzy.dev/$p" \
+    && echo "$p open" || echo "$p BLOCKED"
+done
+```
+
+### 3. Compose delta
+
+Add these two services to `/home/demo/docker-compose.yml` (the copy in
+`deploy/docker-compose.demo.yml` should be updated to match). They sit next to
+the existing `gateway`/`web`; they do **not** replace them.
+
+`network_mode: host` is required — RustDesk must see real peer IPs, and it
+publishes its own ports, so no `ports:` mapping is used. Limits and log caps are
+the same policy as the rest of the demo (R-16 / R-19).
+
+```yaml
+  hbbs:
+    image: rustdesk/rustdesk-server:latest
+    container_name: rclient-demo-hbbs
+    command: hbbs -r relay-demo.linkzy.dev:21117
+    network_mode: host
+    volumes:
+      - ./relay-data:/root
+    restart: unless-stopped
+    mem_limit: 64m
+    memswap_limit: 64m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
+
+  hbbr:
+    image: rustdesk/rustdesk-server:latest
+    container_name: rclient-demo-hbbr
+    command: hbbr
+    network_mode: host
+    volumes:
+      - ./relay-data:/root
+    restart: unless-stopped
+    mem_limit: 64m
+    memswap_limit: 64m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
+```
+
+Measured cost on this host: `hbbs` ~2.7 MB and `hbbr` ~1.5 MB RSS (1.1.16),
+13.1 MB image on disk. The caps above leave plenty of headroom.
+
+### 4. Generate the key — fresh, never the owner's
+
+`hbbs` creates an Ed25519 key pair on first start **if the data directory has no
+`id_ed25519` yet**. So: start with an empty `./relay-data`, and let it generate.
+
+```sh
+cd /home/demo
+mkdir -p relay-data                      # must be empty the first time
+docker compose up -d hbbs hbbr
+sleep 5
+docker logs rclient-demo-hbbs 2>&1 | grep "Key:"
+#  INFO ... Key: <base64>                  <- this is the PUBLIC key
+```
+
+Verified on this host with a throwaway container: the first run logs
+`Private/public key written to id_ed25519/id_ed25519.pub` and then
+`Key: <base64>`. The key pair lives in `/home/demo/relay-data/id_ed25519`
+(private, mode 0600) and `id_ed25519.pub` (public). The same directory also
+gets `db_v2.sqlite3*` — the peer database. Rules:
+
+- **Never** copy the owner's `id_ed25519*` from the production host.
+- **Never** commit `relay-data/` — it holds the private key and the peer
+  database. It lives at `/home/demo/relay-data` **on the VPS**, outside the
+  repository, so a normal clone never contains it; the compose file only refers
+  to it as a bind mount. If you ever copy the compose file into a checkout and
+  run it there, add `relay-data/` to `.gitignore` first and check
+  `git status` before committing.
+- The **public** key goes into `/home/demo/.env` as `SERVER_KEY` (mode 600). The
+  private key never leaves the VPS.
+- If you ever need to regenerate, `docker compose down hbbs hbbr`, delete
+  `relay-data/`, and repeat — every client must then be updated with the new key.
+
+Then point the demo gateway at the local pair and restart **only** the demo
+stack:
+
+```sh
+# /home/demo/.env
+HBBS_HOST=relay-demo.linkzy.dev
+HBBS_WS_PORT=21118
+HBBR_HOST=relay-demo.linkzy.dev
+HBBR_WS_PORT=21119
+SERVER_KEY=<the fresh public key from above>
+
+cd /home/demo && docker compose up -d
+```
+
+### 5. What the visitor pastes into RustDesk
+
+This is the block the demo landing page should show (verbatim, with the key
+filled in at deploy time — do not hardcode it in the repo):
+
+> **Before you connect**, tell your RustDesk to use this demo's server:
+>
+> 1. Open RustDesk on the machine you want to control.
+> 2. Click the **⋮** menu next to your ID → **Network** (on recent versions:
+>    **Settings → Network**), and unlock with admin rights if asked.
+> 3. Set:
+>    - **ID Server** = `relay-demo.linkzy.dev`
+>    - **Key** = *(the demo's public key, shown on this page)*
+>    - **Relay Server** = leave blank (RustDesk infers it)
+>    - **API Server** = leave blank
+> 4. Apply, wait for the status to turn green, then type your machine ID and
+>    password into the form above.
+>
+> To undo it later, clear **ID Server** and **Key** and re-enter them.
+
+Only the **controlled** machine needs this. The browser side is already
+configured by the demo.
+
+### 6. Verify before advertising it
+
+1. `docker compose ps` — four containers healthy (`rclient-demo-*`).
+2. From outside: `21115`–`21119` open on `relay-demo.linkzy.dev` (step 2 loop).
+3. On a real machine with RustDesk set as in step 5: the ID shows as online, and
+   a session from <https://rclient-demo.linkzy.dev> shows video.
+4. `docker logs rclient-demo-gateway --tail 50` shows a rendezvous against our
+   `hbbs`, not `rs-ny.rustdesk.com`.
+5. Only then change the demo's wording from "degraded" to working.
+
+### 7. Rollback
+
+```sh
+cd /home/demo
+docker compose stop hbbs hbbr
+# restore the public defaults in .env (HBBS_HOST=rs-ny.rustdesk.com, ...)
+docker compose up -d
+```
+
+Removing the two services and the `relay-data/` directory returns the host to
+exactly today's state, with no leftover ports or containers.
 
 ## Security notes
 
