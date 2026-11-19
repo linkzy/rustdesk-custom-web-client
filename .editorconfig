@@ -1,0 +1,22 @@
+# EditorConfig — https://editorconfig.org
+# The repo is worked on from Windows and Linux; keep whitespace consistent
+# without turning every edit into a whole-file reformat.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+
+[*.md]
+# Trailing spaces are a markdown line break; leave them alone.
+trim_trailing_whitespace = false
+
+[*.{yml,yaml}]
+indent_size = 2
+
+[*.{json,jsonc}]
+indent_size = 2
