@@ -194,9 +194,34 @@ docker compose -f docker-compose.prod.yml logs -f gateway
 docker compose -f docker-compose.prod.yml pull && docker compose -f docker-compose.prod.yml up -d
 ```
 
-Rollback: pin the image tag in the compose file to a previous commit SHA (CI
-publishes `ghcr.io/linkzy/rclient-web:<sha>` alongside `:latest`) and run
-`up -d` again.
+Rollback, or staying put on purpose: pin the image tag in the compose file and
+run `up -d` again.
+
+```yaml
+# docker-compose.prod.yml
+image: ghcr.io/linkzy/rclient-gateway:0.2.0
+image: ghcr.io/linkzy/rclient-web:0.2.0
+```
+
+A `v*` tag publishes `0.2.0`, `0.2` and `sha-<short>` alongside `latest` on both
+images (see [`RELEASING.md`](./RELEASING.md)). Every commit build also publishes
+`sha-<short>` (e.g. `sha-c40a9ca`) and a bare 40-character commit tag — either
+pins one exact image, and is the most precise rollback target.
+
+The two images are **separate builds**, so a release tag can exist on the
+gateway before the web image has finished. Check both before pinning:
+
+```bash
+for repo in rclient-gateway rclient-web; do
+  tok=$(curl -s "https://ghcr.io/token?scope=repository:linkzy/$repo:pull&service=ghcr.io" \
+    | python3 -c 'import sys,json;print(json.load(sys.stdin)["token"])')
+  curl -s -o /dev/null -w "$repo:0.2.0 -> %{http_code}\n" \
+    -H "Authorization: Bearer $tok" \
+    -H 'Accept: application/vnd.oci.image.index.v1+json,application/vnd.docker.distribution.manifest.list.v2+json,application/vnd.docker.distribution.manifest.v2+json' \
+    "https://ghcr.io/v2/linkzy/$repo/manifests/0.2.0"
+done
+# 200 = published, 404 = not there yet
+```
 
 The gateway logs connection events — target ID, relay addresses, handshake stages,
 frame rates — and never the password. A verbose per-keystroke log exists in

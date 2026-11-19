@@ -37,13 +37,22 @@ containers, its own tunnel and unit.
 
 ## What a visitor gets
 
-**Status: the UI works, but a real session does not complete today** — see
-"Relay options" below. The demo defaults to **RustDesk's public servers**, so a
-visitor only needs a machine ID and a password — no relay, no server key, no
-setup. Anyone who runs their own RustDesk server can enter it under **Advanced
-options** (HBBS host, HBBR host, server key); those fields work exactly as on any
-other deployment, and pointing them at a relay that is up is the current
-workaround.
+> **DEGRADED — the UI works, a real session does not complete.** RustDesk's public
+> *relay* ports have been refused from every vantage point I tested (last checked
+> 2026-11-19, after the 0.2.0 redeploy). The demo is deployed and healthy, but
+> typing a machine ID will not produce video until a reachable relay exists. See
+> "Relay options" below for the evidence and the fix. **"Redeployed to 0.2.0"
+> does not mean "works now".**
+
+The demo defaults to **RustDesk's public servers**, so a visitor needs only a
+machine ID and a password — no relay, no server key, no setup. Anyone who runs
+their own RustDesk server can enter it under **Advanced options** (HBBS host,
+HBBR host, server key); those fields work exactly as on any other deployment,
+and pointing them at a relay that is up is the current workaround.
+
+The deployed stack is release 0.2.0 (web and gateway). That is a correctness and
+audio/refactor update, not a connectivity fix — it does not change the relay
+situation above.
 
 ### Limits
 
@@ -53,11 +62,14 @@ workaround.
   relay (no direct P2P), so this is the normal path for every demo session.
 - **No guarantees.** The demo can be restarted, redeployed, rate-limited or taken
   down at any time. It is a demo, not a service. Don't depend on it.
-- **RustDesk's public servers must be up.** If RustDesk's public infrastructure
-  has a bad day, the demo cannot connect — that is outside our control. At the
-  time of writing its **relay** ports (`21117`/`21119`) were refused from this
-  host, my machine and 8 external nodes, while its ID ports were open. See
-  "Relay options" below for the evidence and the recommended fix.
+- **RustDesk's public servers must be up — and right now they are not.** Its
+  **relay** ports (`21117`/`21119`) have been refused from this host, my own
+  machine and 8 external nodes, while its ID ports stayed open. Re-checked after
+  the 0.2.0 redeploy: unchanged (`21116`/`21118` open, `21117`/`21119` refused,
+  also from inside the running gateway container). That is outside our control.
+  See "Relay options" below for the evidence and the recommended fix.
+- **A redeploy does not fix connectivity.** The demo follows the published
+  image; restarting it onto a newer release cannot make a closed relay port open.
 - **No captcha, no accounts, no storage.** The gateway keeps no session data
   beyond the life of a connection, and the demo has no database.
 - **One visitor per WebSocket.** A browser tab holds one session; the gateway
