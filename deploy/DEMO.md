@@ -62,12 +62,11 @@ workaround.
   beyond the life of a connection, and the demo has no database.
 - **One visitor per WebSocket.** A browser tab holds one session; the gateway
   drops the previous session when a new connect arrives on the same socket.
-- **The page title is a placeholder until the demo is redeployed.** The demo
-  currently serves `<title>web</title>` because it still runs a pre-0.2.0 web
-  image. T16 fixed the title in `web/index.html`
-  (`<title>rclient — RustDesk web client</title>`), and the fix is in the
-  published `0.2.0`/`latest` web image; the demo picks it up on its next
-  redeploy (see "Redeploying" above). No code change is needed.
+- **The page title tracks the image, not the repo.** The demo now serves
+  `<title>rclient — RustDesk web client</title>` (T16, picked up by the 0.2.0
+  redeploy of 2026-11-19). Any later title change in `web/index.html` only shows
+  up after a redeploy — the demo follows the published image, it does not build
+  from source.
 
 ## Architecture
 
