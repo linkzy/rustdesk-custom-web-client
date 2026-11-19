@@ -64,10 +64,10 @@
       ],
       "imposedBy": "HMN",
       "confirmation": "checked-by-agent",
-      "status": "partial",
-      "current": "The T10 truth pass fixed the false password claim, stale audio/KI statuses, the hardcoded IP, the TestDelay pitfall and the compose file names, and added AGENTS.md. Remaining: README advertises rclient.linkzy.dev as the live demo (PROJ-003) and its demo-screenshots/hero visual are still missing (T15, T20).",
-      "check": "Read README.md and docs/ against the code; nothing stated that the code does not do.",
-      "updatedAt": 1795117035163,
+      "status": "done",
+      "current": "Met for Phase 1: the password claim is now true (opt-in, off by default); audio and KI statuses agree across docs; no server IPs or keys in the docs; the README's demo line carries the degraded warning; tests/CI counts and commands match reality after the T11/T13 corrections.",
+      "check": "Grep README/docs for claims about stored data, features, checks and deployment, and verify each against code/config; run npm run lint/test in both packages and compare with what the docs state.",
+      "updatedAt": 1795120839419,
       "updatedBy": "core"
     },
     {
@@ -188,10 +188,10 @@
       "imposedBy": "HMN",
       "confirmation": "checked-by-agent",
       "status": "done",
-      "current": "CI (.github/workflows/ci.yml) runs lint, typecheck, test and build for both packages on pull requests and push to main, with no step removed or softened; gateway lint is green. Web lint is still red on 4 pre-existing react-hooks errors, so the first CI run is honest red until scribe applies the two prepared fixes in T16.",
-      "updatedAt": 1795119327378,
-      "updatedBy": "core",
-      "check": "Open the latest CI run for main or a PR: both jobs must show their lint, typecheck, test and build steps present; a failing step shows red rather than being removed."
+      "current": "Met: CI run #15 on main (94d5944) is green in both jobs with lint, typecheck, test and build present and passing. When the web lint step was red (run #1) it was reported as failing — no step was removed, skipped, or softened; the 4 react-hooks findings were fixed in code (commit 20a36d7) instead of disabling rules.",
+      "updatedAt": 1795119783079,
+      "updatedBy": "ci",
+      "check": "Read the latest CI run on main: two green jobs whose steps include lint, typecheck, test and build."
     },
     {
       "id": "PROJ-008",

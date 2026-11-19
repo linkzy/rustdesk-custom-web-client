@@ -8,7 +8,7 @@ fresh context.)
 
 | I want to… | Start here |
 |---|---|
-| **Deploy it** on my own server | [`../README.md`](../README.md) — Requirements and the five-step setup guide (`docker-compose.yml` builds from source, `docker-compose.prod.yml` runs the published images) |
+| **Deploy it** on my own server | [`DEPLOYMENT.md`](./DEPLOYMENT.md) — relay, rclient, HTTPS, operating and troubleshooting; the README has the 3-command quickstart |
 | **Try it** without installing anything | the public demo, <https://rclient-demo.linkzy.dev> — see [`../deploy/DEMO.md`](../deploy/DEMO.md) |
 | **Run it locally** and change code | [`DEVELOPMENT.md`](./DEVELOPMENT.md) — Node 22, `npm ci` in both packages, the gateway `.env`, both dev servers, what the Vite proxy does |
 | **Contribute** a fix or feature | [`../CONTRIBUTING.md`](../CONTRIBUTING.md) and the open issues labelled `good first issue` / `help wanted` |
@@ -24,9 +24,10 @@ fresh context.)
 
 | File | What it is |
 |---|---|
-| [`../README.md`](../README.md) | The front door: what rclient is, requirements, full setup guide, environment variables, privacy, limitations. |
+| [`../README.md`](../README.md) | The front door: what rclient is, supported features, quickstart, privacy, limitations, FAQ. |
+| [`DEPLOYMENT.md`](./DEPLOYMENT.md) | The full self-host guide: relay setup, environment variables, HTTPS (Cloudflare and reverse proxies), operating, rollback, and a troubleshooting table. |
 | [`../AGENTS.md`](../AGENTS.md) | Two-page orientation: the two packages, commands, the four protocol pitfalls that break sessions silently. |
-| [`DEVELOPMENT.md`](./DEVELOPMENT.md) | Local setup without Docker, the Vite proxy reality, checks that pass and fail, image builds, commit conventions. |
+| [`DEVELOPMENT.md`](./DEVELOPMENT.md) | Local setup without Docker, the Vite proxy reality, the checks (all green), image builds, commit conventions. |
 | [`ARCHITECTURE.md`](./ARCHITECTURE.md) | Diagram and component responsibilities, the full gateway WebSocket API (`/config`, `ping`/`pong`, `gw_stats`, `audio_format`, binary frame markers), captcha and per-connection server overrides, connection lifecycle, deployment, security, known limitations. |
 | [`PROTOCOL.md`](./PROTOCOL.md) | RustDesk protocol reference: ports, proto files, wire framing, rendezvous with `force_relay`, the secure handshake, password hashing, video and audio frames, input events. |
 | [`TASKS.md`](./TASKS.md) | Completed phases, the milestone roadmap, and the good-first-issue set. |
