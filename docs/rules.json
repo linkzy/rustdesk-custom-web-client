@@ -16,6 +16,10 @@
         {
           "id": "C",
           "name": "Hosted instances"
+        },
+        {
+          "id": "D",
+          "name": "Dependencies & protocol"
         }
       ]
     }
@@ -211,6 +215,69 @@
       "status": "done",
       "current": "docs/issues/_discussions.md and deploy/DEMO.md say the demo is degraded and why; the README must do the same in T15.",
       "updatedAt": 1795119549646,
+      "updatedBy": "core"
+    },
+    {
+      "id": "PROJ-009",
+      "area": "PROJ",
+      "stage": "C",
+      "text": "The public demo runs its own hbbs+hbbr pair (not RustDesk's shared relays), and the README/Discussion tell visitors to set ID Server + Key to the demo's relay before connecting.",
+      "action": "Operator deploys the demo-owned relay pair (T24) from the runbook in deploy/DEMO.md; docs state the one extra setup step and stop calling the demo degraded once a session is verified.",
+      "citations": [
+        {
+          "source": "HUM",
+          "location": "Answer to Q6",
+          "excerpt": "Own hbbs+hbbr pair for the demo, and document setting ID Server + Key"
+        }
+      ],
+      "imposedBy": "HMN",
+      "confirmation": "found",
+      "status": "missing",
+      "current": "Diverges: the demo still points at rs-ny.rustdesk.com, whose relay ports 21117/21119 are refused; deploy/DEMO.md labels it degraded.",
+      "check": "From the demo host and from outside: hbbs 21116 (tcp+udp) and hbbr 21117/21119 reachable; a real session completes through the demo relay; README says visitors must set ID Server + Key.",
+      "updatedAt": 1795129985157,
+      "updatedBy": "core"
+    },
+    {
+      "id": "PROJ-010",
+      "area": "PROJ",
+      "stage": "C",
+      "text": "The public demo runs its own hbbs+hbbr pair (not RustDesk's shared relays), and the README/Discussion tell visitors to set ID Server + Key to the demo's relay before connecting.",
+      "action": "Operator deploys the demo-owned relay pair (T24) from the runbook in deploy/DEMO.md; docs state the one extra setup step and stop calling the demo degraded once a session is verified.",
+      "citations": [
+        {
+          "source": "HUM",
+          "location": "Answer to Q6",
+          "excerpt": "Own hbbs+hbbr pair for the demo, and document setting ID Server + Key"
+        }
+      ],
+      "imposedBy": "HMN",
+      "confirmation": "found",
+      "status": "missing",
+      "current": "Diverges: the demo still points at rs-ny.rustdesk.com, whose relay ports 21117/21119 are refused; deploy/DEMO.md labels it degraded.",
+      "check": "From the demo host and from outside: hbbs 21116 (tcp+udp) and hbbr 21117/21119 reachable; a real session completes through the demo relay; README says visitors must set ID Server + Key.",
+      "updatedAt": 1795129997002,
+      "updatedBy": "core"
+    },
+    {
+      "id": "PROJ-011",
+      "area": "PROJ",
+      "stage": "D",
+      "text": "The gateway's protobufjs dependency stays on the 7.x line until the Phase 2 fake RustDesk host exists; the 8.x major bump is verified with a real session before it is merged.",
+      "action": "Dependabot PR #28 stays open and unmerged; T23 is blocked on Phase 2.",
+      "citations": [
+        {
+          "source": "HUM",
+          "location": "Answer to Q7",
+          "excerpt": "Hold until the fake host exists (Phase 2), you can create a taks here in the plan and keep as blocked"
+        }
+      ],
+      "imposedBy": "HMN",
+      "confirmation": "found",
+      "status": "done",
+      "current": "Met: gateway/package.json still pins protobufjs ^7.4.0 with 8.8.1 deliberately not merged (#28 open).",
+      "check": "gateway/package.json protobufjs major is 7; #28 unmerged until T23 unblocks.",
+      "updatedAt": 1795129997012,
       "updatedBy": "core"
     }
   ]
