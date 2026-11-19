@@ -1,0 +1,130 @@
+name: Bug report
+description: Something in rclient does not work as documented
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. rclient talks to your machine through a RustDesk
+        relay, so most bugs can only be understood with the details below.
+
+        **Do not paste passwords, machine IDs, server keys or your relay address
+        unredacted.** Replace them with `XXXXXXX`.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you saw. Include the exact error text the UI showed.
+      placeholder: "After clicking Connect the page sits on 'Connecting…' and then shows: ..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+      placeholder: "The remote screen should appear within a few seconds."
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Number them. Note whether it happens every time.
+      placeholder: |
+        1. Open https://...
+        2. Enter machine ID and password
+        3. Click Connect
+    validations:
+      required: true
+
+  - type: dropdown
+    id: browser
+    attributes:
+      label: Browser
+      options:
+        - Chrome
+        - Edge
+        - Firefox
+        - Safari
+        - Other mobile browser
+        - Other desktop browser
+    validations:
+      required: true
+
+  - type: input
+    id: browser-version
+    attributes:
+      label: Browser version
+      description: From the browser's About page, e.g. "Chrome 131.0.6778.86".
+    validations:
+      required: true
+
+  - type: dropdown
+    id: host-os
+    attributes:
+      label: Host machine OS (the machine being controlled)
+      options:
+        - Windows
+        - Linux
+        - macOS
+        - Not sure
+    validations:
+      required: true
+
+  - type: input
+    id: rustdesk-version
+    attributes:
+      label: RustDesk version on the host
+      description: From RustDesk's About screen.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: relay
+    attributes:
+      label: Relay type
+      description: Where the connection was routed.
+      options:
+        - My own self-hosted relay
+        - RustDesk public relay servers
+        - The public demo (rclient-demo.linkzy.dev)
+        - Not sure
+    validations:
+      required: true
+
+  - type: dropdown
+    id: deployment
+    attributes:
+      label: Which rclient instance
+      options:
+        - My own deployment
+        - The public demo (rclient-demo.linkzy.dev)
+        - The author's instance (rclient.linkzy.dev)
+        - Running locally from source
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Debug Panel logs
+      description: |
+        Enable **Advanced options → Show debug info** before connecting, then paste
+        the Debug Panel contents here. **Redact machine IDs, passwords and server
+        addresses** before pasting.
+      render: text
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I redacted machine IDs, passwords, server keys and addresses.
+          required: true
+        - label: I searched open issues and docs/KNOWN_ISSUES.md for this problem.
+          required: true
