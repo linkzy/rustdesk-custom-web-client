@@ -252,11 +252,11 @@
         }
       ],
       "imposedBy": "HMN",
-      "confirmation": "found",
-      "status": "missing",
-      "current": "Diverges: the demo still points at rs-ny.rustdesk.com, whose relay ports 21117/21119 are refused; deploy/DEMO.md labels it degraded.",
+      "confirmation": "checked-by-agent",
+      "status": "partial",
+      "current": "Relay pair deployed on relay-demo.linkzy.dev (fresh key, host networking, 64m caps); verified: ports 21115-21119 reachable, wrong key -> LICENSE_MISMATCH, demo key accepted, UDP register OK, two peers paired through hbbr, gateway connected to hbbs:21118. Not yet verified: a real RustDesk host producing video+input in the browser. README/SECURITY.md corrections are in flight with scribe.",
       "check": "From the demo host and from outside: hbbs 21116 (tcp+udp) and hbbr 21117/21119 reachable; a real session completes through the demo relay; README says visitors must set ID Server + Key.",
-      "updatedAt": 1795129997002,
+      "updatedAt": 1795131226151,
       "updatedBy": "core"
     },
     {
