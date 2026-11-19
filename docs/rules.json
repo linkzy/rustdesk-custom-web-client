@@ -188,10 +188,10 @@
       "imposedBy": "HMN",
       "confirmation": "checked-by-agent",
       "status": "done",
-      "current": "Met: .github/workflows/ci.yml runs lint, typecheck, test and build for both packages on pull requests and push to main with no step softened; gateway and web lint both exit 0 locally (web 25 tests, gateway 24).",
-      "updatedAt": 1795119647682,
-      "updatedBy": "core",
-      "check": "Open the latest CI run for main or a PR: both jobs must show their lint, typecheck, test and build steps present; a failing step shows red rather than being removed."
+      "current": "Met: CI run #15 on main (94d5944) is green in both jobs with lint, typecheck, test and build present and passing. When the web lint step was red (run #1) it was reported as failing — no step was removed, skipped, or softened; the 4 react-hooks findings were fixed in code (commit 20a36d7) instead of disabling rules.",
+      "updatedAt": 1795119783079,
+      "updatedBy": "ci",
+      "check": "Read the latest CI run on main: two green jobs whose steps include lint, typecheck, test and build."
     },
     {
       "id": "PROJ-008",
