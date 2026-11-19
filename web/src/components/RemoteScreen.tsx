@@ -19,13 +19,16 @@ export function RemoteScreen({ state, controls, onLog, fitToWindow = true }: Rem
   const decoderRef = useRef<VideoFrameDecoder | null>(null);
   const audioRef = useRef<OpusAudioPlayer | null>(null);
 
-  // Stable refs so all effects run once but always see latest values
+  // Stable refs so all effects run once but always see latest values. They are
+  // synced after each render (never during it) so the listeners see fresh data.
   const controlsRef = useRef(controls);
-  controlsRef.current = controls;
   const stateRef = useRef(state);
-  stateRef.current = state;
   const onLogRef = useRef(onLog);
-  onLogRef.current = onLog;
+  useEffect(() => {
+    controlsRef.current = controls;
+    stateRef.current = state;
+    onLogRef.current = onLog;
+  });
 
   const log = (msg: string) => {
     console.log('[input]', msg);

@@ -166,10 +166,10 @@
       ],
       "imposedBy": "HMN",
       "confirmation": "checked-by-agent",
-      "status": "partial",
-      "current": "Diverges: on main be5cc98, CI run #1 shows gateway fully green (install, lint, typecheck, 24 tests, build) but the web job fails at Lint with the 4 pre-existing react-hooks errors, so the project's own lint check does not pass for the whole repo yet (web typecheck/test/build would pass; they are skipped after the lint failure).",
-      "check": "Read the latest CI run on main: the gateway job must be all green and the web job must not fail at Lint.",
-      "updatedAt": 1795119428347,
+      "status": "done",
+      "current": "Met: gateway and web both pass lint, typecheck, tests (24 + 19) and build from a clean checkout, and CI enforces exactly that. commit 20a36d7 fixed the 4 react-hooks findings in web (no rule disabled); the CI run on main after it is the proof.",
+      "check": "Clean checkout: npm ci then npm run lint/typecheck/test/build in gateway/ and web/ (all exit 0), and the CI run on main shows both jobs green.",
+      "updatedAt": 1795119535393,
       "updatedBy": "ci"
     },
     {
@@ -192,6 +192,26 @@
       "updatedAt": 1795119327378,
       "updatedBy": "core",
       "check": "Open the latest CI run for main or a PR: both jobs must show their lint, typecheck, test and build steps present; a failing step shows red rather than being removed."
+    },
+    {
+      "id": "PROJ-008",
+      "area": "PROJ",
+      "stage": "C",
+      "text": "The public demo is described as degraded while RustDesk's public relay ports are unreachable from it; the README and Discussion must not promise a working one-click demo, and the verified path to advertise is self-hosting your own relay.",
+      "action": "README and the pinned Discussion state the caveat and link deploy/DEMO.md; revisit when a demo-owned relay or a working public relay is confirmed.",
+      "citations": [
+        {
+          "source": "HUM",
+          "location": "Original Phase 1 request",
+          "excerpt": "the least thing i want it to be is miss leading"
+        }
+      ],
+      "imposedBy": "HMN",
+      "confirmation": "checked-by-agent",
+      "status": "done",
+      "current": "docs/issues/_discussions.md and deploy/DEMO.md say the demo is degraded and why; the README must do the same in T15.",
+      "updatedAt": 1795119549646,
+      "updatedBy": "core"
     }
   ]
 }
