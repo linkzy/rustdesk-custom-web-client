@@ -37,39 +37,66 @@ containers, its own tunnel and unit.
 
 ## What a visitor gets
 
-> **DEGRADED — the UI works, a real session does not complete.** RustDesk's public
-> *relay* ports have been refused from every vantage point I tested (last checked
-> 2026-11-19, after the 0.2.0 redeploy). The demo is deployed and healthy, but
-> typing a machine ID will not produce video until a reachable relay exists. See
-> "Relay options" below for the evidence and the fix. **"Redeployed to 0.2.0"
-> does not mean "works now".**
+> **STATUS: the relay infrastructure is in place and was verified at protocol
+> level; a full RustDesk-to-browser session has NOT yet been run end to end.**
+> The demo now has its own RustDesk relay pair (`hbbs`+`hbbr`) on
+> `relay-demo.linkzy.dev` instead of RustDesk's shared servers. Ports, key
+> enforcement, UDP registration and relay pairing (bidirectional data through
+> `hbbr` between two different networks) are all verified. What is **not** yet
+> verified is the last mile: a real RustDesk host registered on this relay
+> producing video and input in the browser. Until someone does that, treat the
+> demo as "should work, unproven".
 
-The demo defaults to **RustDesk's public servers**, so a visitor needs only a
-machine ID and a password — no relay, no server key, no setup. Anyone who runs
-their own RustDesk server can enter it under **Advanced options** (HBBS host,
-HBBR host, server key); those fields work exactly as on any other deployment,
-and pointing them at a relay that is up is the current workaround.
+**Before you connect**, point your RustDesk at the demo's relay (only the
+machine you want to control needs this; the browser side is already configured):
 
-The deployed stack is release 0.2.0 (web and gateway). That is a correctness and
-audio/refactor update, not a connectivity fix — it does not change the relay
-situation above.
+1. RustDesk → **⋮** menu next to your ID → **Network** (or **Settings →
+   Network**), unlock with admin rights if asked.
+2. **ID Server** = `relay-demo.linkzy.dev`
+3. **Key** = the demo's public key, shown below
+4. **Relay Server** and **API Server**: leave blank (RustDesk infers them)
+5. Apply, wait for the status to go green, then enter your machine ID and
+   password in the form.
+
+The demo's public key is **not** in this repository (T24: the key lives only in
+`/home/demo/.env` on the VPS, mode `600`). Read it there when you need it:
+
+```sh
+# on the VPS — prints the PUBLIC key only
+cat /home/demo/relay-data/id_ed25519.pub
+```
+
+The demo page should show that value to visitors; whoever runs a real session
+test should confirm it is displayed. The matching **private** key stays in
+`/home/demo/relay-data/id_ed25519` and never leaves the VPS.
+
+Anyone who already runs their own RustDesk server can instead enter their own
+relay under **Advanced options**; that still works as before.
+
+The deployed stack is release 0.2.0 (web and gateway).
 
 ### Limits
 
-- **Public relay = slower**, even when it is up. Connections go through
-  RustDesk's shared public servers, which are best-effort: expect extra latency
-  and lower frame rates than a dedicated relay. The gateway always requests a
-  relay (no direct P2P), so this is the normal path for every demo session.
+- **The demo relay is this one VPS.** At most `128 Mb/s` per session (hbbr's
+  default) and bounded by the host's bandwidth. It is shared by every visitor,
+  so heavy use is slow use. Expect noticeably lower frame rates than a dedicated
+  relay.
 - **No guarantees.** The demo can be restarted, redeployed, rate-limited or taken
   down at any time. It is a demo, not a service. Don't depend on it.
-- **RustDesk's public servers must be up — and right now they are not.** Its
-  **relay** ports (`21117`/`21119`) have been refused from this host, my own
-  machine and 8 external nodes, while its ID ports stayed open. Re-checked after
-  the 0.2.0 redeploy: unchanged (`21116`/`21118` open, `21117`/`21119` refused,
-  also from inside the running gateway container). That is outside our control.
-  See "Relay options" below for the evidence and the recommended fix.
-- **A redeploy does not fix connectivity.** The demo follows the published
-  image; restarting it onto a newer release cannot make a closed relay port open.
+- **Visitors must configure their client first.** Unlike a public-relay demo,
+  this one requires the two-step setup above. If you type a machine ID whose
+  RustDesk is still on RustDesk's public servers, it will not be found — the two
+  are separate networks.
+- **The key is required.** hbbs rejects a punch-hole request with the wrong key
+  (`LICENSE_MISMATCH`), which is verified behaviour, not a bug.
+- **The demo no longer depends on RustDesk's public servers.** It used to; their
+  relay ports (`21117`/`21119`) were refused from the VPS, my machine and 8
+  external nodes while the ID ports stayed open, which is why this pair was
+  built. If you ever switch the demo back to the public servers, expect the same
+  failure. See "Relay options" below for that history.
+- **The public key above is generated, not the owner's.** Rotating it (see
+  "Rotating the demo key") invalidates every client that was configured with the
+  old one, so only do it deliberately.
 - **No captcha, no accounts, no storage.** The gateway keeps no session data
   beyond the life of a connection, and the demo has no database.
 - **One visitor per WebSocket.** A browser tab holds one session; the gateway
@@ -83,7 +110,7 @@ situation above.
 ## Architecture
 
 ```
-visitor ──HTTPS──> Cloudflare edge
+visitor's browser ──HTTPS──> Cloudflare edge (rclient-demo.linkzy.dev, proxied)
                       │
                       ▼
         rclient-demo-tunnel.service   (cloudflared, own tunnel, own config)
@@ -93,13 +120,77 @@ visitor ──HTTPS──> Cloudflare edge
                       │  http://gateway:4000   (private compose network)
                       ▼
         rclient-demo-gateway   (Node gateway, no published port)
-                      │  ws://rs-ny.rustdesk.com:21118 / :21119
+                      │  ws://relay-demo.linkzy.dev:21118 / :21119
                       ▼
-        RustDesk public servers  (ID + relay)
+        rclient-demo-hbbs  ──>  rclient-demo-hbbr
+        (own relay pair, host networking, 21115-21119)
+                      ▲
+                      │  raw RustDesk TCP/UDP on 21116/21117,
+                      │  DNS-only record (NOT proxied)
+        visitor's RustDesk host  (ID Server = relay-demo.linkzy.dev, + Key)
 ```
 
-Both containers, the network, the tunnel and the systemd unit are named
+Two things reach the internet and they are deliberately different shapes:
+
+| Hostname | DNS | Carries | Why |
+| --- | --- | --- | --- |
+| `rclient-demo.linkzy.dev` | proxied (orange cloud) | HTTPS only, via the tunnel | The web UI. Cloudflare terminates TLS. |
+| `relay-demo.linkzy.dev` | **DNS-only (grey cloud)** | raw TCP/UDP `21115`–`21119` | RustDesk's own protocol. Cloudflare's proxy cannot carry it, so this must point straight at the VPS. |
+
+Every container, the network, the tunnel and the systemd unit are named
 `rclient-demo*` so they can never be confused with the owner's services.
+
+## What was verified, and what was not
+
+Honest accounting — this is the part to trust over any status line.
+
+**Verified (2026-11-19, after deployment):**
+
+| Check | Result |
+| --- | --- |
+| All four containers healthy | `docker compose ps` → gateway/web healthy, hbbs/hbbr up |
+| Relay ports from outside the VPS (my machine) | `21115`, `21116`, `21117`, `21118`, `21119` all reachable; UDP `21116` sends |
+| DNS shape | `relay-demo` resolves straight to the VPS IP (grey cloud, verified against Cloudflare's API and two resolvers) — not to a Cloudflare address |
+| hbbs bound to the right relay | log: `relay-servers=["relay-demo.linkzy.dev:21117"]` |
+| **Relay data path** | **paired two peers on different networks through `hbbr` and exchanged payloads both ways.** hbbr logged `Relayrequest T24PROOF from <vps>:54762` then `… from <my ip>:50101 got paired`, and both sides received the other's messages. |
+| Key enforcement | punch-hole with a **wrong** key → `LICENSE_MISMATCH`; with the demo key → accepted |
+| UDP registration | `RegisterPk` over UDP `21116` → `register_pk_response` OK |
+| Gateway points at the new relay | log: `Connected to hbbs at ws://relay-demo.linkzy.dev:21118` |
+| Public UI | `https://rclient-demo.linkzy.dev/` → 200, title `rclient — RustDesk web client`; `/config` → `{"captchaEnabled":false}`; `/ws` upgrades 101 |
+
+**NOT verified — do not assume it works:**
+
+- **A full session from a real RustDesk host to the browser (video + input).**
+  I could not do this: the only RustDesk I control is configured for a custom
+  relay, and I would not repoint the owner's running client. My synthetic
+  rendezvous attempts could not reproduce what a real client does over the
+  hole-punch/relay handshake, so the last mile is unproven.
+- **Behaviour behind a real NAT/router pair** as opposed to the direct
+  connections I tested.
+- **Latency and frame rate** in practice.
+
+To close it: configure one real machine as described above, connect from the
+demo, and confirm video and input. If that works, update this section and the
+status line at the top.
+
+## Rotating the demo key
+
+```sh
+cd /home/demo
+docker compose stop hbbs hbbr
+mv relay-data relay-data.old-$(date +%F)     # keep it until the new one is proven
+mkdir relay-data
+docker compose up -d hbbs hbbr
+sleep 5
+docker logs rclient-demo-hbbs 2>&1 | grep "Key:"
+```
+
+Put the printed key into `/home/demo/.env` as `SERVER_KEY`, then
+`docker compose up -d` so the gateway picks it up. Update the key shown on the
+demo page and in this file. Every visitor must re-enter it.
+
+Never copy the owner's `id_ed25519` here, and never commit `relay-data/` — it
+holds the private key and the peer database.
 
 ## Where things live (on the VPS)
 
@@ -107,14 +198,17 @@ Both containers, the network, the tunnel and the systemd unit are named
 | --- | --- |
 | Compose file | `/home/demo/docker-compose.yml` (same as `deploy/docker-compose.demo.yml`) |
 | Environment | `/home/demo/.env` (mode `600`, never committed) |
+| **Relay key pair + peer DB** | `/home/demo/relay-data/` (`id_ed25519` mode `600`, `id_ed25519.pub`, `db_v2.sqlite3`) |
 | Anonymous pull config | `/home/demo/.docker/config.json` |
 | Tunnel config | `/etc/cloudflared/rclient-demo.yml` |
 | Tunnel credentials | `/root/.cloudflared/cc58c549-6980-404d-b653-9bc9d8ca4613.json` (mode `400`) |
 | Tunnel unit | `/etc/systemd/system/rclient-demo-tunnel.service` |
 
+`relay-data/` sits on the VPS only — it is a bind mount, never in the repo.
+
 The three small files that belong in the repo are under `deploy/`:
 
-- `deploy/docker-compose.demo.yml` — the stack
+- `deploy/docker-compose.demo.yml` — the stack (web, gateway, hbbs, hbbr)
 - `deploy/demo.env.example` — the `.env` template (placeholders only)
 - `deploy/cloudflared/` — the tunnel config, its unit, and how to manage it
 
@@ -399,10 +493,11 @@ for p in 21116 21118 21117 21119; do
 done
 ```
 
-## If the owner chooses an own relay pair — runbook
+## Own relay pair — the runbook that was executed (T24)
 
-Written so someone who has never touched this host can do it. **Nothing here is
-deployed**; it runs only after the owner picks option C. Budget ~20 minutes.
+This section is the procedure that was **actually used** on 2026-11-19, kept so it
+can be repeated (rebuild, migration, or a second environment). The live state is
+described by "What a visitor gets", "Architecture" and "What was verified" above.
 
 ### 0. What you are building
 
@@ -417,19 +512,30 @@ Both the browser and the remote machine must be on the **same**
 `hbbs`. That is the whole point: the public `hbbs` cannot route a session to a
 relay we own, so we move both peers onto ours.
 
-### 1. DNS — request one **DNS-only** name
+### 1. DNS — one **DNS-only** name (done: `relay-demo.linkzy.dev`)
 
-Ask the owner for a record like:
+The record exists and is DNS-only:
 
 | Name | Type | Value | Proxy |
 | --- | --- | --- | --- |
-| `relay-demo.linkzy.dev` | `A` | the VPS IPv4 address | **DNS only (grey cloud)** |
+| `relay-demo.linkzy.dev` | `A` | the VPS IPv4 | **DNS only (grey cloud)** |
 
 The grey cloud is mandatory. `rclient-demo.linkzy.dev` is proxied (orange
 cloud), and Cloudflare's proxy only speaks HTTP(S) on 80/443 — RustDesk's raw
-TCP/UDP on 21115–21119 would never reach the host (verified: `21116` on the
-proxied name is refused). Keep the web UI on the proxied name and only RustDesk
-traffic on the DNS-only one.
+TCP/UDP on 21115–21119 never reaches the host through it (verified: `21116` on
+the proxied name is refused). Keep the web UI on the proxied name and only
+RustDesk traffic on the DNS-only one.
+
+It was created via the Cloudflare API using the credentials already in
+`/root/.cloudflared/cert.pem` (account + zone scoped), so no new token was
+needed. To recreate:
+
+```sh
+# token is read from the existing cert; never print or commit it
+curl -s -X POST -H "Authorization: Bearer $CF_TOKEN" -H 'Content-Type: application/json' \
+  "https://api.cloudflare.com/client/v4/zones/$CF_ZONE/dns_records" \
+  --data '{"type":"A","name":"relay-demo.linkzy.dev","content":"<VPS IP>","proxied":false,"ttl":300}'
+```
 
 Check it resolves to the VPS directly, not to a Cloudflare address:
 
@@ -460,11 +566,11 @@ for p in 21115 21116 21117 21118 21119; do
 done
 ```
 
-### 3. Compose delta
+### 3. Compose delta (applied)
 
-Add these two services to `/home/demo/docker-compose.yml` (the copy in
-`deploy/docker-compose.demo.yml` should be updated to match). They sit next to
-the existing `gateway`/`web`; they do **not** replace them.
+These two services are in `/home/demo/docker-compose.yml` and mirrored in
+`deploy/docker-compose.demo.yml`. They sit next to `gateway`/`web`; they do
+**not** replace them.
 
 `network_mode: host` is required — RustDesk must see real peer IPs, and it
 publishes its own ports, so no `ports:` mapping is used. Limits and log caps are
@@ -582,13 +688,15 @@ configured by the demo.
 
 ### 6. Verify before advertising it
 
-1. `docker compose ps` — four containers healthy (`rclient-demo-*`).
-2. From outside: `21115`–`21119` open on `relay-demo.linkzy.dev` (step 2 loop).
-3. On a real machine with RustDesk set as in step 5: the ID shows as online, and
-   a session from <https://rclient-demo.linkzy.dev> shows video.
-4. `docker logs rclient-demo-gateway --tail 50` shows a rendezvous against our
-   `hbbs`, not `rs-ny.rustdesk.com`.
-5. Only then change the demo's wording from "degraded" to working.
+1. `docker compose ps` — four containers up (`rclient-demo-*`). ✔ done
+2. From outside: `21115`–`21119` open on `relay-demo.linkzy.dev`. ✔ done
+3. `docker logs rclient-demo-gateway` shows a rendezvous against our `hbbs`,
+   not `rs-ny.rustdesk.com`. ✔ done
+4. **On a real machine with RustDesk set as in step 5: the ID shows as online,
+   and a session from <https://rclient-demo.linkzy.dev> shows video and accepts
+   input. ✘ NOT DONE** — this is the one step that still needs doing before the
+   demo can honestly be called working.
+5. Only after step 4, change the status at the top of this file.
 
 ### 7. Rollback
 
