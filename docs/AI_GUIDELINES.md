@@ -113,7 +113,7 @@ The password is only persisted in the browser when the user opts in with "Rememb
 
 The project works and is deployed by its author. All 22 original development tasks are complete. The client connects to a self-hosted RustDesk relay, decodes H264 video in the browser, plays host audio (Opus) when the browser supports WebCodecs `AudioDecoder`, and forwards keyboard/mouse input.
 
-**Current known bugs** (open, fix pending) — see `docs/KNOWN_ISSUES.md`:
+**Current known bugs** (open) — see `docs/KNOWN_ISSUES.md`:
 - KI-003 — performance on a self-hosted relay is comparable to public relays; under investigation
 - KI-006 — Common keyboard shortcuts (Ctrl+C, Ctrl+V, etc.) not forwarded to remote machine
 

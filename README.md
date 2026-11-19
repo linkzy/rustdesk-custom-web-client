@@ -55,7 +55,7 @@ rclient Web UI  ──►  rclient Gateway
 - A Linux VPS or any always-on machine running Docker and Docker Compose
 - A domain name (or a free [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/) for HTTPS without a static IP)
 
-Sizing depends on how many sessions you run; the project publishes no benchmark. A relay plus gateway plus nginx fits comfortably on a small VPS (1 GB RAM), and memory limits are on the roadmap (`docs/TASKS.md`, R-19).
+Sizing depends on how many sessions you run; the project publishes no benchmark and no tested minimum. Both compose stacks are small (one Node.js gateway and one nginx container), and memory limits are on the roadmap (`docs/TASKS.md`, R-19).
 
 ### For connecting (browser requirements)
 
