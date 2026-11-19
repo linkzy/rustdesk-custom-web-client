@@ -37,28 +37,27 @@ containers, its own tunnel and unit.
 
 ## What a visitor gets
 
-Type a RustDesk machine ID and its password → the remote desktop opens in the
-browser. Nothing to install.
-
-The demo defaults to **RustDesk's public relay servers**, so a visitor only needs
-a machine ID and a password — no relay, no server key, no setup. Anyone who runs
-their own RustDesk server can enter it under **Advanced options** (HBBS host,
-HBBR host, server key); those fields still work exactly as on any other
-deployment.
+**Status: the UI works, but a real session does not complete today** — see
+"Relay options" below. The demo defaults to **RustDesk's public servers**, so a
+visitor only needs a machine ID and a password — no relay, no server key, no
+setup. Anyone who runs their own RustDesk server can enter it under **Advanced
+options** (HBBS host, HBBR host, server key); those fields work exactly as on any
+other deployment, and pointing them at a relay that is up is the current
+workaround.
 
 ### Limits
 
-- **Public relay = slower.** Connections go through RustDesk's shared public
-  servers, which are best-effort: expect extra latency and lower frame rates than
-  a dedicated relay. The gateway always requests a relay (no direct P2P), so this
-  is the normal path for every demo session.
+- **Public relay = slower**, even when it is up. Connections go through
+  RustDesk's shared public servers, which are best-effort: expect extra latency
+  and lower frame rates than a dedicated relay. The gateway always requests a
+  relay (no direct P2P), so this is the normal path for every demo session.
 - **No guarantees.** The demo can be restarted, redeployed, rate-limited or taken
   down at any time. It is a demo, not a service. Don't depend on it.
 - **RustDesk's public servers must be up.** If RustDesk's public infrastructure
-  has a bad day, the demo cannot connect. That is outside our control. (At the
-  time of writing, RustDesk's public *relay* port `21119`/`21117` appeared
-  unreachable from this host and from several independent external nodes, while
-  its ID port `21118` was open. See "Known caveat" below.)
+  has a bad day, the demo cannot connect — that is outside our control. At the
+  time of writing its **relay** ports (`21117`/`21119`) were refused from this
+  host, my machine and 8 external nodes, while its ID ports were open. See
+  "Relay options" below for the evidence and the recommended fix.
 - **No captcha, no accounts, no storage.** The gateway keeps no session data
   beyond the life of a connection, and the demo has no database.
 - **One visitor per WebSocket.** A browser tab holds one session; the gateway
@@ -212,34 +211,143 @@ Applied to both demo containers so the demo cannot destabilise the host:
 The host has 5.8 GB RAM (~3.0 GB available) and 353 GB free disk, so the demo's
 ~300 MB ceiling is a small, bounded slice.
 
-## Known caveat: RustDesk's public relay ports
+## Relay options — investigation and recommendation
 
-The demo points at RustDesk's public servers (`rs-ny.rustdesk.com`): ID server on
-WebSocket `21118`, relay on `21119`. During the T18 deployment:
+**Short answer:** as deployed, the demo can announce itself but **cannot complete
+a real session**, and running our own `hbbr` on this host would not fix that for
+a visitor whose RustDesk is on the public network. The only self-contained fix is
+a demo-owned **hbbs + hbbr pair** *plus* the visitor pointing their RustDesk at
+it — which changes the demo's "just a machine ID" promise. Details and numbers
+below; nothing of this has been deployed.
 
-- `21118` accepted WebSocket upgrades from the VPS and from external nodes, and
-  the deployed gateway completed a rendezvous against it (an unknown machine ID
-  got the correct "target device is offline" answer — the path works).
-- `21117` and `21119` (the relay ports) were **refused** from the VPS and from
-  four independent external nodes, while `21118` stayed open.
+### What I could and could not test
 
-So the ID/routing half of the public infrastructure works, but the public relay
-half did not appear reachable at deployment time. This matters because the
-gateway currently always asks for a relay (`force_relay: true` in
-`gateway/src/rendezvous.ts`), so a session cannot fall back to a direct
-connection. If a visitor reports "connected, waiting for image" or a relay
-timeout, this is the first thing to check.
+- **Could not** complete a full session: the only RustDesk I control is this
+  machine, and it is configured for a **custom** relay, so it is not registered
+  on RustDesk's public network and the public `hbbs` correctly reports it
+  offline. I did not ask for, and did not use, any production credentials.
+- **Could** verify every step up to the relay, and the relay itself, from
+  several independent vantages.
 
-What to do if it persists:
+### Evidence
 
-1. Re-test `21119` from a neutral vantage point.
-2. Point the demo at any working public or self-hosted relay by editing
-   `HBBS_HOST`/`HBBR_HOST`/`SERVER_KEY` in `/home/demo/.env` and running
-   `docker compose up -d`. **Generate a fresh key for a demo-owned relay — never
-   copy the owner's key.**
-3. Note that leaving `HBBR_HOST` empty makes the gateway fall back to the relay
-   host hbbs returns; setting it explicitly (as the demo does) overrides that.
-   Changing it is a one-line `.env` edit and a restart of the demo stack only.
+Port reachability of `rs-ny.rustdesk.com`, the only public host that still
+resolves (`rs-sg` and `rs-cn` have no A record):
+
+| Port | Role | VPS | My machine | 8 external nodes |
+| --- | --- | --- | --- | --- |
+| 21116 | ID registration (TCP/UDP) | open | open | **6/8 open** |
+| 21118 | ID server for web clients | open | open | **6/8 open** |
+| 21117 | **relay** (TCP) | refused | refused | **0/8 open** |
+| 21119 | **relay** for web clients | refused | refused | **0/8 open** |
+
+Same result from inside the running demo container
+(`rclient-demo-gateway`): `21118 → OPEN`, `21119 → ECONNREFUSED`. Over HTTPS,
+`https://rs-ny.rustdesk.com/ws/id` → `101 Switching Protocols` while
+`/ws/relay` → `404`, and `:21119` does not even complete a TLS handshake.
+
+So the ID half of RustDesk's public infrastructure works; the **relay** half is
+down (or withdrawn). That is outside our control and also breaks RustDesk's own
+<https://rustdesk.com/web/>.
+
+### Why an own `hbbr` on this host would not be enough
+
+In RustDesk's OSS server (`src/rendezvous_server.rs`), **`hbbs` chooses the
+relay** — `get_relay_server()` returns a host from the relay list that `hbbs`
+itself was configured with — and it hands the *same* relay to both peers. The
+two peers must meet on the same `hbbr` under the same UUID. Our gateway could be
+forced onto a relay of ours via `HBBR_HOST`, but the visitor's RustDesk is told
+by the **public** `hbbs` to use the public relay. They would never meet.
+
+Similarly, a demo-owned `hbbs` knows nothing about an ID that registered on the
+public server: it would answer "device is offline". For a visitor's machine to
+be findable, that machine must register on **our** `hbbs`.
+
+Finally, `rclient` always relays: `gateway/src/rendezvous.ts` sets
+`force_relay: true`, and `relay.ts` only ever opens a relay connection. There is
+no direct/P2P path to fall back on.
+
+### Options
+
+| # | Option | Works for a public-network visitor? | Cost / caveats |
+| --- | --- | --- | --- |
+| A | Keep public defaults, wait for RustDesk's relay to return | Eventually, not today | Free. Demo is **degraded now**; nothing we can do. |
+| B | Own `hbbr` only, gateway points at it | **No** | Useless — visitor stays on the public relay. Do not do this. |
+| C | Own `hbbs` + `hbbr` pair, visitor points RustDesk at the demo | **Yes**, reliably | ~5 MB RAM, 13 MB image, 5 ports; **visitor must be configured** (see below). |
+| D | Change the gateway to allow direct connections (no force_relay) | Sometimes | Code change in `gateway/` (not mine); fails behind double NAT; still no relay when hole punching fails. |
+
+### Resource cost of option C (measured on this host)
+
+I started both images in a sealed container (`--network none`, no published
+ports) to measure, then removed them — this was a measurement, not a deployment:
+
+- `rustdesk/rustdesk-server:latest` — **13.1 MB** on disk (already pulled).
+- `hbbs` 1.1.16 RSS **2.7 MB**, `hbbr` **1.5 MB** → **~5 MB** total.
+- Ports `21115`, `21116` (TCP **and** UDP), `21117`, `21118`, `21119` are all
+  **free** on the host and **accept inbound** (I bound each for 30 s and reached
+  it from an external machine; nothing was installed and the test listener is
+  gone).
+- Host has ~3.0 GB RAM available and 352 GB free disk, so this is negligible.
+
+The compose delta is one service pair alongside the demo, with **host
+networking** (RustDesk requires it so peers see real IPs), its own data volume
+and its own freshly generated key:
+
+**A separate DNS name is required.** `rclient-demo.linkzy.dev` is proxied
+through Cloudflare (orange cloud), so it only carries HTTP(S) on 80/443 — raw
+RustDesk traffic on 21116/21117 does not pass through it (verified: 21116 on the
+hostname is refused). Option C needs a **DNS-only (grey cloud)** record, e.g.
+`rd-demo.linkzy.dev → <VPS IP>`, and RustDesk clients then use that name:
+
+```yaml
+  hbbs:
+    image: rustdesk/rustdesk-server:latest
+    command: hbbs -r rd-demo.linkzy.dev:21117
+    network_mode: host
+    volumes: ["./relay-data:/root"]
+    restart: unless-stopped
+    mem_limit: 64m
+    logging: { driver: json-file, options: { max-size: "10m", max-file: "3" } }
+
+  hbbr:
+    image: rustdesk/rustdesk-server:latest
+    command: hbbr
+    network_mode: host
+    volumes: ["./relay-data:/root"]
+    restart: unless-stopped
+    mem_limit: 64m
+    logging: { driver: json-file, options: { max-size: "10m", max-file: "3" } }
+```
+
+`hbbs` prints the new public key on first run (`docker logs … | grep "Key:"`);
+that key goes in `SERVER_KEY`, in place of the public one. Never reuse the
+owner's key.
+
+**The catch:** with option C the demo is only useful to someone who sets
+**ID Server = `rd-demo.linkzy.dev`** and **Key = the demo's key** in their
+RustDesk (or runs a RustDesk built with that config). That is no longer "type a
+machine ID and go". It is honest and reliable, but it is a different demo.
+
+### Recommendation
+
+1. **Now:** keep the public defaults and label the demo as **degraded /
+   best-effort** rather than advertising a working session. That is what it is
+   today, and it costs nothing.
+2. **If a reliably-working demo is wanted:** take option C, and document the
+   two-step setup for the visitor (install RustDesk → set ID Server + Key) on the
+   demo landing page. Verify with a real peer before advertising it.
+3. **Do not** deploy an `hbbr` alone (option B): it looks like a fix and is not.
+4. Tell RustDesk users the demo's status honestly in the README (T15) — do not
+   claim "connect in one click" while the public relay is down.
+
+Re-test before acting — this may be a transient RustDesk outage:
+
+```sh
+for p in 21116 21118 21117 21119; do
+  timeout 5 bash -c "exec 3<>/dev/tcp/rs-ny.rustdesk.com/$p" 2>/dev/null \
+    && echo "$p open" || echo "$p refused"
+done
+```
 
 ## Security notes
 
