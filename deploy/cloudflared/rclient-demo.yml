@@ -1,0 +1,18 @@
+# rclient demo tunnel — separate from the owner's tunnel on this host.
+#
+# Deployed on the VPS as /etc/cloudflared/rclient-demo.yml.
+# Served by the systemd unit rclient-demo-tunnel.service.
+#
+# Only the demo hostname is routed here. Every other hostname on this machine
+# stays on the owner's own tunnel and is not touched by this file.
+
+tunnel: cc58c549-6980-404d-b653-9bc9d8ca4613
+credentials-file: /root/.cloudflared/cc58c549-6980-404d-b653-9bc9d8ca4613.json
+
+ingress:
+  - hostname: rclient-demo.linkzy.dev
+    service: http://localhost:8090
+    originRequest:
+      httpHostHeader: rclient-demo.linkzy.dev
+  # Everything else is a 404 — this tunnel deliberately exposes nothing else.
+  - service: http_status:404
