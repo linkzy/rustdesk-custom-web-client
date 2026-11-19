@@ -13,7 +13,7 @@
     "lint": "eslint src --ext .ts"
   },
   "dependencies": {
-    "dotenv": "^17.4.2",
+    "dotenv": "^18.0.10",
     "protobufjs": "^7.4.0",
     "tweetnacl": "^1.0.3",
     "tweetnacl-util": "^0.15.1",
