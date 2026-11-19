@@ -20,8 +20,10 @@ It consists of two components:
 | Order | File | What it covers |
 |---|---|---|
 | 0 | `AGENTS.md` | Short entry point: what the project is, commands, top protocol pitfalls |
+| 0.5 | `docs/README.md` | Index of every document, routed by intent |
 | 1 | `docs/AI_GUIDELINES.md` | This file — orientation, conventions, pitfalls |
-| 2 | `docs/ARCHITECTURE.md` | System design, component relationships, data flow, gateway WS API |
+| 1.5 | `docs/DEVELOPMENT.md` | Local setup without Docker, checks, image builds |
+| 2 | `docs/ARCHITECTURE.md` | System design, component relationships, data flow, gateway WS API, limitations |
 | 3 | `docs/PROTOCOL.md` | RustDesk protocol details (protobuf, encryption, codec, port map) |
 | 4 | `docs/TASKS.md` | Development task list with status — **check this to know what to work on** |
 | 5 | `docs/KNOWN_ISSUES.md` | Confirmed bugs with root cause analysis — **read before touching session.ts** |
@@ -121,7 +123,8 @@ KI-004 (scroll direction) and KI-005 (keyboard caps/layout) are fixed in the cod
 
 **Deployments:**
 - The repository ships `docker-compose.yml` (builds from source) and `docker-compose.prod.yml` (runs the `ghcr.io` images). There is no `docker-compose.infra.yml` or `docker-compose.app.yml` in the repo; a relay stack is set up separately by whoever hosts RustDesk.
-- Public access in the author's deployment goes through a Cloudflare Tunnel in front of the `web` container. No server addresses or keys are published here — read them from the deployment's own `.env`.
+- `deploy/` holds the **public demo** stack (separate VPS, separate tunnel, public RustDesk relays by default). Its runbook is `deploy/DEMO.md`; do not confuse it with the owner's production instance.
+- Public access in both deployments goes through Cloudflare Tunnel in front of the `web` container. No server addresses or keys are published here — read them from the deployment's own `.env`.
 
 ---
 

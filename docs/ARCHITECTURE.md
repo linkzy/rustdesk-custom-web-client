@@ -122,6 +122,18 @@
 
 ## Gateway WebSocket API (Browser ↔ Gateway)
 
+The gateway (`gateway/src/server.ts`) runs **one HTTP server** that answers a
+single REST endpoint and upgrades the same listener to WebSocket:
+
+| Route | Method | What it returns |
+|---|---|---|
+| `/config` | `GET` | `{ "captchaEnabled": boolean, "hcaptchaSiteKey": string }` — the site key is only filled in when captcha is enabled |
+| other HTTP paths | any | `404` |
+| WebSocket upgrade | upgrade | the session socket. `new WebSocketServer({ server: httpServer })` accepts an upgrade on any path; in practice clients use `/ws`, because nginx only proxies `/ws` (`web/nginx.conf`) and `useGateway.ts` opens `/ws`. |
+
+`/config` sends `Access-Control-Allow-Origin: *` so it can also be read directly
+from a dev origin.
+
 ### Browser → Gateway (JSON)
 
 ```jsonc
@@ -180,6 +192,72 @@
 // Byte 1:    flags  (bit 0 = keyframe; always 0 for audio)
 // Bytes 2+:  raw payload (H264 Annex B / VP9 raw / raw Opus packet)
 ```
+
+`useGateway.ts` routes every binary frame: marker `5` goes to the Opus player,
+the rest to the video decoder, which configures itself from the marker byte
+(`web/src/video/decoder.ts`).
+
+### Captcha flow (R-04)
+
+Captcha is off unless the gateway sets `CAPTCHA_ENABLED=true`.
+
+```
+Browser                          Gateway (server.ts)             hCaptcha API
+   │  GET /config                    │
+   │────────────────────────────────►│  { captchaEnabled, hcaptchaSiteKey }
+   │◄────────────────────────────────│
+   │  (if enabled: load api.js, render widget, get token)
+   │  {type:"connect", captchaToken} │
+   │────────────────────────────────►│──POST /siteverify (secret, token)──►│
+   │                                 │◄────────────── { success } ─────────│
+   │◄── {type:"error"} or proceed ───│
+```
+
+- `GET /config` returns the site key only when captcha is enabled
+  (`server.ts`), so the form knows whether to render the widget.
+- `ConnectForm` loads `https://js.hcaptcha.com/1/api.js?render=explicit`,
+  renders the widget into `#hcaptcha-widget`, and stores the token.
+- On `connect` with captcha enabled, the gateway rejects a missing token
+  (`CAPTCHA required`) or a token hCaptcha does not verify
+  (`CAPTCHA verification failed`) before any rendezvous happens.
+- After a failed/disconnected attempt the form resets the widget
+  (`hcaptcha.reset()`), so every attempt needs a fresh token.
+
+### Per-connection server overrides (R-03)
+
+`ConnectForm`'s **Advanced options** sends the overrides inside `serverConfig`;
+nothing is applied to the gateway process, they are per session:
+
+| Field | Used by |
+|---|---|
+| `hbbsHost` | `performRendezvous` — `host:port` or `host`; port falls back to `HBBS_WS_PORT` |
+| `hbbrHost` | `connectRelay` — `host:port` or `host`; port falls back to `HBBR_WS_PORT`, host falls back to `HBBR_HOST`, then to the relay address hbbs returned |
+| `serverKey` | `performRendezvous` — sent as `licence_key` in `PunchHoleRequest` |
+
+Empty fields are omitted on the browser side and the gateway falls back to its
+`.env`. The values are kept in `localStorage` (`rclient_hbbs_host`,
+`rclient_hbbr_host`, `rclient_server_key`).
+
+---
+
+## Known limitations
+
+Current, code-level limits — not plans (the roadmap is in `TASKS.md`):
+
+| Limitation | Reality in the code |
+|---|---|
+| **Audio needs WebCodecs `AudioDecoder`** | `web/src/video/audio.ts` checks `AudioDecoder`/`AudioContext` at load and silently skips audio when they are missing. Video and input keep working; the packet is simply dropped. |
+| **Single monitor** | `session.ts → handlePeerInfo` reads `displays[0]` only. No display switcher exists (`SwitchDisplay` is defined in the proto but unused). |
+| **No file transfer** | `FileAction`/`FileResponse` are in the proto; neither gateway nor UI handles them. |
+| **No clipboard** | `Clipboard`/`Cliprdr` are in the proto; no handler on either side (R-10). |
+| **Ctrl+C / Ctrl+V not forwarded** | Open bug — KI-006. Some shortcuts never reach the page, and copy/paste needs the clipboard channel that does not exist yet. |
+| **One session per browser socket** | `server.ts` keeps a single `session` variable; a new `connect` disconnects the previous session. One WebSocket = one remote machine. |
+| **One gateway process, single-threaded** | All sessions share one Node.js event loop; there is no worker pool or horizontal sharding. |
+| **No automatic reconnect** | `useGateway.ts` closes and reports `disconnected`; reconnecting is the user clicking Connect again (R-08). |
+| **Force relay only** | `force_relay: true` in `rendezvous.ts`. Direct P2P is not attempted, so the relay is always in the path and its latency is always yours. |
+| **Codec reported is fixed** | The `connected` message says `codec: "h264"` regardless of what the host chose; the decoder still adapts to the actual marker byte. |
+| **Mobile keyboard input** | Mouse/touch works on Android; there is no on-screen keyboard or device-keyboard forwarding (R-13b). |
+| **Rendezvous retries then gives up** | An OFFLINE peer is retried 3 times, 2 s apart, then the connect fails. |
 
 ---
 
@@ -244,6 +322,25 @@ A RustDesk relay (`hbbs`/`hbbr`) is **not** part of this repository. Run it sepa
 docker compose -f docker-compose.prod.yml pull
 docker compose -f docker-compose.prod.yml up -d
 ```
+
+### There are two live instances
+
+| Instance | What it is |
+|---|---|
+| `rclient.linkzy.dev` | The owner's private production instance, on its own VPS with its own relay. Not a public demo. |
+| `rclient-demo.linkzy.dev` | A **public demo** on a separate VPS, so visitors never reach the owner's relay (rule PROJ-003). It defaults to **RustDesk's public servers** (`rs-ny.rustdesk.com`, ports 21118/21119), so anyone can try it with just a machine ID and password; visitors can still point it at their own relay under Advanced options. |
+
+The demo is deployed from `deploy/` (`docker-compose.demo.yml`,
+`demo.env.example`, `cloudflared/`) with its own compose project, network, tunnel
+and `.env`. Full runbook, host details, stability limits and the one operational
+caveat live in [`../deploy/DEMO.md`](../deploy/DEMO.md) — it is not repeated here.
+
+The caveat worth knowing as a developer: the gateway always sets
+`force_relay: true`, so a session cannot fall back to a direct connection. When
+the demo deployed, RustDesk's ID port (21118) answered but its relay ports
+(21117/21119) appeared unreachable from several vantage points. If a demo session
+connects and then waits for an image, check the relay path first. The demo's
+`.env` can point at a working relay without code changes.
 
 ---
 
