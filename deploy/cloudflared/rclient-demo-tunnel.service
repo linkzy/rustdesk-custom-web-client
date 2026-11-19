@@ -1,0 +1,14 @@
+[Unit]
+Description=rclient demo Cloudflare Tunnel (separate from the host's tunnel)
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+TimeoutStartSec=15
+Type=notify
+ExecStart=/usr/local/bin/cloudflared --no-autoupdate --config /etc/cloudflared/rclient-demo.yml tunnel run
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,89 @@
+# rclient public demo instance — SEPARATE from the owner's production deployment (PROJ-003).
+#
+# The demo runs on the Contabo VPS under its own subdomain, with its own Cloudflare
+# tunnel, its own .env and its own relay settings. It must never share a container,
+# network, port, tunnel or key with the owner's private instance.
+#
+# Deployed location on the VPS: /home/demo/docker-compose.yml
+# Copy this file there (or keep them identical) and create /home/demo/.env from
+# deploy/demo.env.example. Never commit the real .env.
+#
+# Redeploy:
+#   cd /home/demo && DOCKER_CONFIG=/home/demo/.docker docker compose pull && \
+#     DOCKER_CONFIG=/home/demo/.docker docker compose up -d
+#
+# Ports: the web UI listens on 127.0.0.1 only; the gateway publishes nothing.
+# cloudflared is the single public entry point.
+
+name: rclient-demo
+
+services:
+  gateway:
+    image: ghcr.io/linkzy/rclient-gateway:latest
+    container_name: rclient-demo-gateway
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      # HBBS_HOST / HBBS_WS_PORT / HBBR_HOST / HBBR_WS_PORT / SERVER_KEY /
+      # CAPTCHA_ENABLED come from .env (never committed).
+      - GATEWAY_PORT=4000
+    expose:
+      - "4000"
+    networks:
+      - demo
+    labels:
+      # The host runs watchtower against every container. Demos are redeployed
+      # deliberately (deploy.sh), never mid-session by an auto-updater.
+      - "com.centurylinklabs.watchtower.enable=false"
+    # R-19: hard memory cap so the demo can never starve the host's other services.
+    mem_limit: 192m
+    memswap_limit: 192m
+    # R-16: bounded logs (10 MB x 3 = 30 MB per container).
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:4000/config').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  web:
+    image: ghcr.io/linkzy/rclient-web:latest
+    container_name: rclient-demo-web
+    restart: unless-stopped
+    ports:
+      # Localhost only — cloudflared connects to this; nothing else can.
+      - "127.0.0.1:${WEB_PORT:-8090}:80"
+    depends_on:
+      gateway:
+        condition: service_healthy
+    networks:
+      - demo
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
+    mem_limit: 96m
+    memswap_limit: 96m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/config || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+networks:
+  demo:
+    driver: bridge
