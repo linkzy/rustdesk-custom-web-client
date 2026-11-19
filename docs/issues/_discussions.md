@@ -10,18 +10,20 @@ browser page that connects through **your own** relay to a machine running the
 RustDesk host app. No install on the controlling side, no account, no analytics
 added by the project.
 
-- Try it: <https://rclient-demo.linkzy.dev> — a separate demo instance, currently
-  pointing at RustDesk's public servers. See the caveat below before judging it.
+- Try it: <https://rclient-demo.linkzy.dev> — a separate demo instance that runs
+  its own relay. Point your RustDesk at `relay-demo.linkzy.dev` with the key shown
+  on the page before you connect; see the caveat below.
 - Read: [`docs/README.md`](https://github.com/linkzy/rustdesk-custom-web-client/blob/main/docs/README.md)
   routes every kind of reader to the right page.
 - Deploy your own: the README's setup guide.
 
 **Honest status.** Video, input and audio work against a self-hosted relay. The
-public demo routes through RustDesk's shared servers, and their relay ports were
-refusing connections when it was deployed — the ID server answers, the relay did
-not. Until that is resolved the demo is labelled *degraded*: it may fail with
-"connected, waiting for image". Your own relay is the path that is actually
-verified. The full evidence is in
+public demo has its own relay pair now, verified at protocol level — ports, key
+enforcement, relay pairing — but nobody has yet run a real RustDesk host through
+it into a browser, so treat the last mile as "should work, unproven". It also
+needs two minutes of setup on the machine you want to control (ID Server and Key,
+on the demo page), and a machine still on RustDesk's public network will not be
+found. The full evidence is in
 [`deploy/DEMO.md`](https://github.com/linkzy/rustdesk-custom-web-client/blob/main/deploy/DEMO.md).
 
 ## What is planned

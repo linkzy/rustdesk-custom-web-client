@@ -74,9 +74,12 @@ a misconfiguration; the project does not add a fallback for it.
 
 `SERVER_KEY`, the relay hosts, and any hCaptcha keys live in the deployment's
 `.env` (git-ignored; only `*.env.example` placeholders are committed). The
-repository ships no keys and no server addresses. The public demo uses RustDesk's
-published public-server key, which is public information and grants nothing beyond
-using RustDesk's shared servers.
+repository ships no keys and no server addresses.
+
+The public demo runs its own RustDesk relay (`hbbs`/`hbbr`) with its own generated
+key pair. Only the **public** half is shown to visitors — they need it to point
+their RustDesk at the demo's relay — and the private half stays on the demo host,
+outside this repository. Neither key is committed here.
 
 ### Captcha is rate-limiting, not authentication
 

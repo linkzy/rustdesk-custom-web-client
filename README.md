@@ -13,13 +13,24 @@ control a machine from a browser on a computer where you cannot install anything
 
 > **Try it: [rclient-demo.linkzy.dev](https://rclient-demo.linkzy.dev)**
 >
-> ⚠️ The demo is **degraded right now**. It points at RustDesk's public relay
-> servers, and their relay ports were refusing connections when it was deployed —
-> ID lookups work, but a session can sit at "connected, waiting for image". The
-> evidence and the options are in [`deploy/DEMO.md`](./deploy/DEMO.md).
+> The demo runs its own relay, so point your RustDesk at it first — only the
+> machine you want to control needs this, the browser side is already configured:
 >
-> **Running your own relay is the path that is verified.** The demo exists to
-> show the UI, not to prove a session works.
+> 1. RustDesk → **Network** (next to your ID) → **ID Server** =
+>    `relay-demo.linkzy.dev`
+> 2. **Key** = the demo's public key, shown on the demo page
+> 3. Apply, wait for the status to go green, then enter your machine ID and
+>    password in the form.
+>
+> A machine still on RustDesk's public network will not be found — they are
+> separate relays. Anyone who already runs a RustDesk server can enter their own
+> under **Advanced options** instead.
+>
+> ⚠️ **The last mile is unproven.** The relay itself is verified at protocol
+> level (ports, key enforcement, relay pairing), but a real RustDesk host
+> producing video and input in the browser has not been run end to end yet. Treat
+> the demo as "should work, unproven". Details and evidence:
+> [`deploy/DEMO.md`](./deploy/DEMO.md).
 
 ---
 
@@ -199,9 +210,11 @@ You need *a* relay: your own, or a public one. Running your own is the point —
 lower latency, your data on your server. rclient ships no relay configuration.
 
 **Is the demo working?**
-Right now, not reliably. It routes through RustDesk's public servers and their
-relay ports were refusing connections; it may sit at "connected, waiting for
-image". Your own relay is the verified path. See [`deploy/DEMO.md`](./deploy/DEMO.md).
+Not proven end to end. The demo has its own relay now, verified at protocol level
+(ports, key enforcement, relay pairing), but nobody has run a real RustDesk host
+through it into a browser yet. It also needs two minutes of setup: set your
+RustDesk's **ID Server** to `relay-demo.linkzy.dev` and its **Key** to the one on
+the demo page. See [`deploy/DEMO.md`](./deploy/DEMO.md).
 
 **Where is the password stored?**
 Nowhere, unless you opt in with "Remember password" — then in your browser's
@@ -229,8 +242,8 @@ RustDesk is not running on the host, or it is pointing at a different relay than
 
 **It connects, then sits at "waiting for image".**
 Rendezvous worked but the relay stream did not — usually the relay's `21117`/`21119`
-ports are unreachable. This is exactly the public-relay problem the demo has.
-The step-by-step is in [`docs/DEPLOYMENT.md`](./docs/DEPLOYMENT.md#troubleshooting).
+ports are unreachable, or the host and the gateway are on different relays. The
+step-by-step is in [`docs/DEPLOYMENT.md`](./docs/DEPLOYMENT.md#troubleshooting).
 
 **No video at all.**
 Either the browser lacks WebCodecs `VideoDecoder`, or the page is not on HTTPS.
