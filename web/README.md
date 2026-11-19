@@ -1,73 +1,39 @@
-# React + TypeScript + Vite
+# web — rclient frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React + TypeScript frontend for rclient: connects to the gateway over WebSocket,
+decodes video with WebCodecs (`VideoDecoder`), plays host audio with
+`AudioDecoder`, renders to a canvas and captures keyboard/mouse input.
 
-Currently, two official plugins are available:
+## Run it
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm ci
+npm run dev      # Vite on http://localhost:5173, proxies /ws to ws://localhost:4000
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+The gateway must be running on port 4000 (`cd ../gateway && npm run dev`).
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Checks
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm run build    # tsc -b && vite build
+npm run lint     # eslint .
 ```
+
+`npm run lint` currently fails on pre-existing `react-hooks` errors in
+`src/components/RemoteScreen.tsx` and `src/components/ConnectForm.tsx`; see the
+notes in [`../docs/TASKS.md`](../docs/TASKS.md).
+
+## Where things are
+
+| Path | What it does |
+|---|---|
+| `src/components/ConnectForm.tsx` | Device ID, password, "Remember password", Advanced options, hCaptcha |
+| `src/components/RemoteScreen.tsx` | Canvas rendering, mouse/keyboard capture |
+| `src/hooks/useGateway.ts` | WebSocket lifecycle and message handling |
+| `src/video/decoder.ts` | WebCodecs video decoder |
+| `src/video/audio.ts` | Opus audio player |
+| `src/utils/passwordStorage.ts` | The only place the password may be persisted (opt-in only) |
+
+Project docs: [`../README.md`](../README.md), [`../AGENTS.md`](../AGENTS.md),
+[`../docs/`](../docs/).

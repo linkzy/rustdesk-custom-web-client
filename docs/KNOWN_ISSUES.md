@@ -1,7 +1,7 @@
 # Known Issues
 
 > This document tracks confirmed bugs and limitations. Updated as issues are discovered.  
-> Each entry includes: symptoms, root cause (if known), reproduction steps, and log evidence.
+> Each entry includes the status, the symptoms, and — where known — the root cause and the fix applied.
 
 ---
 
@@ -27,7 +27,7 @@
 ```protobuf
 message TestDelay {
   int64  time         = 1;   // timestamp from server (echo back as-is)
-  bool   from_client  = 2;   // server sends false; client must reply with true
+  bool   from_client  = 2;   // server sends false; client echoes false
   uint32 last_delay   = 3;
   uint32 target_bitrate = 4;
 }
@@ -50,14 +50,17 @@ The relay closure code `1006` (abnormal close / no close frame) indicates the **
 In `session.ts → handleRelayMessage`:
 ```typescript
 } else if (msg.test_delay) {
-  // time is decoded as string by protobufjs (longs: String) — convert to number for re-encoding
-  const echoTime = Number(msg.test_delay.time) || 0;
-  this.sendMessage({ test_delay: { time: echoTime, from_client: true } });
-  console.log('[session] Echoed TestDelay time=' + echoTime);
+  // Echo only host-originated pings, with from_client: false — the host then
+  // treats it as a delay response and drives VIDEO_QOS FPS from the RTT.
+  // time is decoded as string by protobufjs (longs: String) — convert to number for re-encoding.
+  if (!msg.test_delay.from_client) {
+    const echoTime = Number(msg.test_delay.time) || 0;
+    this.sendMessage({ test_delay: { time: echoTime, from_client: false, last_delay: 0 } });
+  }
 }
 ```
 
-Confirmed working: sessions now hold indefinitely. Log shows `[session] Echoed TestDelay time=0` every few seconds.
+Confirmed working: sessions now hold indefinitely.
 
 ---
 
@@ -80,68 +83,71 @@ Test input forwarding from a **second physical device** (phone browser, another 
 
 ## KI-003 — Performance Comparable to Public Relay Servers
 
-**Status:** Under investigation  
+**Status:** Open (under investigation)  
 **Severity:** Medium — expected improvement not seen
 
 ### Symptoms
 - Latency and frame rate similar to public RustDesk relay servers despite using a self-hosted VPS relay
 
 ### Likely Causes
-1. **Codec negotiation** — The gateway currently requests H264 but the actual codec chosen by the server is unknown and may not be optimal
-2. **No adaptive bitrate** — The `TestDelay.target_bitrate` field (part of KI-001) is not being processed, so the server can't adapt to the connection quality
-3. **WebCodecs decode overhead** — Browser-side decoding may add latency not present in the native app
-4. **Single-threaded gateway** — All sessions share one Node.js event loop
+1. **Codec choice** — the gateway declares VP8/VP9/H264/AV1 and prefers H264, but the codec the host actually picks is not surfaced in the UI (`connected.codec` is hardcoded to `"h264"` in `session.ts`)
+2. **Adaptive bitrate** — the gateway logs `TestDelay.target_bitrate` but does not act on it
+3. **WebCodecs decode overhead** — browser-side decoding may add latency not present in the native app
+4. **Single-threaded gateway** — all sessions share one Node.js event loop
 
 ### Next Steps
-- Fix KI-001 first (TestDelay handler with `target_bitrate`)
-- Add codec logging to confirm which codec is actually in use
+- Report the real codec from `PeerInfo` instead of the hardcoded value
+- Act on `target_bitrate` and log the adaptive FPS the host reports (`auto_adjust_fps`)
 - Profile browser-side WebCodecs pipeline
 
 ---
 
 ## KI-004 — Mouse Scroll Wheel Direction Inverted
 
-**Status:** Open  
-**Severity:** Low — usable but unintuitive  
+**Status:** ✅ Fixed (v0.1.1, commit `7c75213`)  
+**Severity:** Low — was usable but unintuitive  
 **Affected component:** `web/src/components/RemoteScreen.tsx`
 
 ### Symptoms
-- Scrolling down in the browser scrolls **up** on the remote machine, and vice versa
+- Scrolling down in the browser scrolled **up** on the remote machine, and vice versa
 
 ### Root Cause
-The `deltaY` sign mapping to the RustDesk wheel protocol may be inverted. In `RemoteScreen.tsx` the wheel handler sends `y = e.deltaY > 0 ? 1 : -1`. On the host side (`input_service.rs`) the y value is used directly on Windows (`y = evt.y`) but inverted on non-Windows (`y = -y`). The correct direction for the Windows target needs to be verified.
+The `deltaY` sign was mapped straight to the RustDesk wheel protocol. On Windows the host uses the y value directly; browser `deltaY` is positive when scrolling down, while Windows `MOUSEEVENTF_WHEEL` uses a positive value for scrolling up.
 
-### Fix
-In `RemoteScreen.tsx`, invert the scroll direction:
+### Fix Applied
+In `RemoteScreen.tsx`, the wheel handler inverts the direction and sends the wheel event type (`mask = 3`):
+
 ```typescript
 const scrollY = e.deltaY > 0 ? -1 : 1;
+controlsRef.current.sendMouse(0, scrollY, MOUSE_TYPE_WHEEL, getMods(e));
 ```
-If the host is Linux/macOS the logic may differ — test on both targets.
+
+Verify on a Linux/macOS host if you touch this again — those targets may map the sign differently.
 
 ---
 
 ## KI-005 — Keyboard Input: Apparent Caps Lock and Language Mismatch
 
-**Status:** Open  
-**Severity:** Medium — text input is unreliable, wrong characters appear  
-**Affected component:** `gateway/src/session.ts`, `web/src/components/RemoteScreen.tsx`
+**Status:** ✅ Fixed (v0.1.1, commits `c78b528` and `543054c`)  
+**Severity:** Medium — text input was unreliable, wrong characters appeared  
+**Affected components:** `gateway/src/utils/keymap.ts`, `web/src/components/RemoteScreen.tsx`
 
 ### Symptoms
-- Characters typed in the web client appear as their **shifted/caps** equivalents on the remote machine (e.g. typing `a` produces `A`)
-- Special characters and symbols don't match the key pressed — suggests keyboard layout mismatch
-- Appears as if Caps Lock is permanently on from the remote machine's perspective
-- The remote machine's own Caps Lock state has no effect on the behaviour
+- Characters typed in the web client appeared as their **shifted/caps** equivalents on the remote machine (e.g. typing `a` produced `A`)
+- Special characters and symbols did not match the key pressed — suggested keyboard layout mismatch
+- Appeared as if Caps Lock was permanently on from the remote machine's perspective
 
-### Likely Root Cause
-The key event translation layer in the gateway maps browser `KeyboardEvent` properties to RustDesk's `KeyEvent` protobuf incorrectly. Two likely sub-causes:
+### Root Cause
+The gateway translated printable characters into RustDesk's `chr` (position/scan-code) field using the browser's `keyCode`, which is always the uppercase virtual-key value for letters (65–90). The host then inserted the character for that position, hence uppercase output and broken non-US layouts. Separately, the `unicode` field was sent on both keydown and keyup, and the host inserts a character for both — producing double characters.
 
-1. **Modifier state bleeding** — Shift or Caps Lock modifiers may be included in the `modifiers` array when they should not be, or not cleared after key-up events
-2. **`chr` vs `control_key` selection** — The gateway may be sending `chr` (Unicode codepoint) with the wrong casing, or using uppercase `keyCode` values instead of the raw character code
+### Fix Applied
+In `keymap.ts`:
 
-### Next Steps
-- Audit the key event handler in `RemoteScreen.tsx` and the gateway's key translation
-- Log the exact `chr` and `modifiers` values sent to the host alongside what the user actually typed
-- Compare with RustDesk's native `KeyEvent` serialisation for the same keystrokes
+1. Printable characters are sent through the `unicode` field with the actual code point (`e.key.charCodeAt(0)`), so case and layout arrive correctly.
+2. Only the keydown is sent for `unicode` events (`if (!msg.down) return null;`), which stops double-typing.
+3. Ctrl/Alt combinations still use `chr` with `keyCode`, since those need the Windows virtual-key code to trigger shortcuts.
+
+Control keys (arrows, Enter, Tab, etc.) keep using `control_key`.
 
 ---
 
@@ -149,21 +155,21 @@ The key event translation layer in the gateway maps browser `KeyboardEvent` prop
 
 **Status:** Open  
 **Severity:** Medium — copy/paste and common shortcuts don't work  
-**Affected component:** `gateway/src/session.ts`, `web/src/components/RemoteScreen.tsx`
+**Affected component:** `gateway/src/utils/keymap.ts`, `web/src/components/RemoteScreen.tsx`
 
 ### Symptoms
-- Pressing Ctrl+C, Ctrl+V, Ctrl+A, Ctrl+Z, and similar browser-native shortcuts in the remote screen do nothing or trigger the browser's own action instead of being forwarded to the remote machine
+- Pressing Ctrl+C, Ctrl+V, Ctrl+A, Ctrl+Z, and similar shortcuts in the remote screen does nothing (or triggers the browser's own action instead of reaching the remote machine)
 - Text cannot be copied from or pasted into the remote session using standard shortcuts
 
 ### Likely Root Cause
-Browser keyboard events for common shortcuts (Ctrl+C, Ctrl+V, etc.) are intercepted by the browser before reaching the JavaScript event handlers, or the gateway's key event builder doesn't properly encode modifier+key combinations as RustDesk `KeyEvent` messages. The `buildKeyPayload` function in `session.ts` may be dropping or mis-encoding these combinations.
+Browser keyboard events for common shortcuts are often consumed by the browser before the page sees them, and copy/paste additionally needs the clipboard channel (R-10, not implemented). For the shortcuts that do reach the page, `buildKeyPayload` (`gateway/src/utils/keymap.ts`) already sends Ctrl/Alt combinations as `chr` + `keyCode`, so the remaining gap is the browser side and clipboard support rather than the encoding itself.
 
 ### Next Steps
-- Audit `buildKeyPayload` for modifier handling with common shortcut keys
-- Log the raw `KeyboardEvent` and the resulting `KeyEvent` payload for Ctrl+C
-- Consider using `preventDefault()` on the canvas for known shortcut combinations
-- Compare with native RustDesk `KeyEvent` output for the same keystroke
+- Confirm in a browser which shortcuts actually reach the listener (the canvas calls `preventDefault()` on keydown/keyup)
+- Capture the raw `KeyboardEvent` and the resulting `KeyEvent` payload for Ctrl+C on the remote host
+- Clipboard sync (R-10) is a prerequisite for real copy/paste; the shortcut forwarding can be checked separately
+- Remember the verbose keystroke log in `gateway/src/server.ts` is commented out (R-15) — restore it temporarily when debugging this
 
 ---
 
-*Last updated: 2026-07-01*
+*Last updated: 2026-11-19*

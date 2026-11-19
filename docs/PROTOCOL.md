@@ -2,6 +2,8 @@
 
 > This document summarizes the RustDesk protocol as it applies to the `rclient` gateway.
 > Source: https://github.com/rustdesk/rustdesk (open source, MIT/AGPL)
+>
+> The proto file versions used by this project live in `gateway/src/proto/` (`rendezvous.proto`, `message.proto`) and are loaded at runtime by `protobufjs`.
 
 ---
 
@@ -32,7 +34,7 @@ https://raw.githubusercontent.com/rustdesk/rustdesk/master/libs/hbb_common/proto
 https://raw.githubusercontent.com/rustdesk/rustdesk/master/libs/hbb_common/protos/message.proto
 ```
 
-Copy these into `gateway/src/proto/` and load with `protobufjs`.
+The copies in `gateway/src/proto/` are loaded with `protobufjs` at runtime (no codegen step). If you refresh them from upstream, check the enum values in this document against the new files.
 
 ---
 
@@ -72,9 +74,9 @@ RendezvousMessage {
   punch_hole_request: PunchHoleRequest {
     id: "TARGET_PEER_ID",
     nat_type: ASYMMETRIC,
-    licence_key: "",
+    licence_key: "<SERVER_KEY>",   // from env / Advanced options, may be empty
     conn_type: DEFAULT_CONN,
-    force_relay: true        // ← always true for web gateway
+    force_relay: true              // ← always true for web gateway
   }
 }
 ```
@@ -86,7 +88,7 @@ _Option A: `relay_response` (newer hbbs, most common with `force_relay: true`)_
 RendezvousMessage {
   relay_response: RelayResponse {
     uuid: "server-assigned-uuid",    // use this UUID — do NOT generate your own
-    relay_server: "147.x.x.x",       // relay server address
+    relay_server: "relay.example.com", // relay server address
     pk: bytes,                        // signed IdPk blob (peer's Curve25519 pk inside)
     // refuse_reason is set on error
   }
@@ -98,7 +100,7 @@ _Option B: `punch_hole_response` (older hbbs)_
 ```proto
 RendezvousMessage {
   punch_hole_response: PunchHoleResponse {
-    relay_server: "147.x.x.x",
+    relay_server: "relay.example.com",
     pk: bytes,
     failure: ID_NOT_EXIST  // or OFFLINE, LICENSE_MISMATCH on error
   }
@@ -136,9 +138,10 @@ message Message {
     LoginResponse    login_response   = 8;   // peer → client (encrypted)
     VideoFrame       video_frame      = 6;   // peer → client: encoded frame (encrypted)
     MouseEvent       mouse_event      = 10;  // client → peer (encrypted)
+    AudioFrame       audio_frame      = 11;  // peer → client: Opus packet (encrypted)
     KeyEvent         key_event        = 15;  // client → peer (encrypted)
     TestDelay        test_delay       = 5;   // peer ↔ client: keepalive ping (encrypted)
-    Misc             misc             = 19;  // display info, options, etc.
+    Misc             misc             = 19;  // display info, options, audio format, etc.
     PeerInfo         peer_info        = 25;  // peer → client: display list
   }
 }
@@ -151,8 +154,8 @@ message Message {
 4. Peer → Client: `Hash { salt, challenge }` (encrypted)
 5. Client → Peer: `LoginRequest` (encrypted)
 6. Peer → Client: `LoginResponse` (encrypted, contains `PeerInfo` on success)
-7. Peer → Client: `VideoFrame` stream (encrypted)
-8. Peer ↔ Client: `TestDelay` keepalive every few seconds (encrypted, **must echo back**)
+7. Peer → Client: `VideoFrame` and `AudioFrame` streams (encrypted)
+8. Peer ↔ Client: `TestDelay` keepalive roughly every second (encrypted, **must echo back with `from_client: false`**)
 
 ---
 
@@ -170,7 +173,7 @@ Message {
     username: "TARGET_PEER_ID",  // MUST be the target machine's RustDesk ID (e.g. "54372565")
                                   // Empty string → server returns "Offline" error!
     password: bytes,        // see hashing below
-    my_id: "web-client",    // any string ID for the gateway
+    my_id: "rclient-web",   // any string ID for the gateway
     my_name: "Web Browser",
     option: OptionMessage {
       supported_decoding: SupportedDecoding {
@@ -178,12 +181,15 @@ Message {
         ability_vp9:  1,
         ability_h264: 1,
         ability_av1:  1,
-        prefer: H264        // prefer H264 for best browser support
-      }
+        prefer: H264        // H264 (enum value 2) for best browser support
+      },
+      image_quality: Balanced,  // enum 3 (gateway sends image_quality: 3)
+      custom_fps: 30,
+      disable_audio: No         // BoolOption 1 = No, i.e. do NOT disable audio
     },
-    video_ack_required: true,  // enables flow control for web clients
+    video_ack_required: false,  // MUST be false (see AI_GUIDELINES pitfall 12)
     session_id: uint64,        // random uint64
-    version: "1.2.4"
+    version: "1.3.8"
   }
 }
 ```
@@ -276,7 +282,11 @@ Message {
 The peer decrypts `symmetric_value` using its own Curve25519 secret key + `asymmetric_value`.  
 **Store `symKey` immediately** — all subsequent messages from the peer are encrypted with it.
 
-The server does NOT send a `public_key` reply. The very next message from the peer is already encrypted.
+The server does NOT send a `public_key` reply. The very next message from the peer is already encrypted. (The gateway keeps a no-op `handlePublicKey` handler that only warns if an unexpected one arrives.)
+
+### Keepalive (TestDelay)
+
+The peer sends `Message { test_delay: { time, from_client: false } }` roughly every second. The client must echo it back with `from_client: false`, and only when the incoming `from_client` is false. That reply feeds the host's `VIDEO_QOS` RTT measurement, which drives FPS adaptation. Echoing with `from_client: true` makes the host treat it as a client ping and drops to minimum FPS. See `AI_GUIDELINES.md` pitfall 11.
 
 ### Per-Message Encryption/Decryption
 
@@ -314,10 +324,12 @@ function decryptMessage(ciphertext: Uint8Array, key: Uint8Array): Uint8Array | n
 ```proto
 message VideoFrame {
   oneof union {
-    EncodedVideoFrames vp8s  = 12;
     EncodedVideoFrames vp9s  = 6;
+    RGB rgb                  = 7;   // raw, not used by this gateway
+    YUV yuv                  = 8;   // raw, not used by this gateway
     EncodedVideoFrames h264s = 10;
     EncodedVideoFrames h265s = 11;
+    EncodedVideoFrames vp8s  = 12;
     EncodedVideoFrames av1s  = 13;
   }
   int32 display = 14;
@@ -335,20 +347,34 @@ message EncodedVideoFrame {
 ```
 
 ### Codec bitstream formats
-| Codec | Format | Browser WebCodecs codec string |
+| Codec | Format | WebCodecs codec string used by this client (`web/src/video/decoder.ts`) |
 |---|---|---|
-| H264 | Annex B NAL units | `"avc1.42E01E"` (baseline) or `"avc1.640028"` (high) |
+| H264 | Annex B NAL units | `"avc1.640028"` |
 | VP9 | Raw VP9 bitstream | `"vp09.00.10.08"` |
 | VP8 | Raw VP8 bitstream | `"vp8"` |
 | AV1 | OBU format | `"av01.0.04M.08"` |
 
+The decoder is configured with `optimizeForLatency: true`.
+
 ### Binary frame format sent to browser
-The gateway strips the protobuf wrapper and sends raw video data to the browser:
+The gateway strips the protobuf wrapper and sends raw payload data to the browser:
 ```
-Byte 0:    codec ID   (1=H264, 2=VP9, 3=VP8, 4=AV1)
-Byte 1:    flags      (bit 0 = isKeyframe)
-Bytes 2+:  raw frame bitstream (e.g. H264 Annex B NAL units)
+Byte 0:    codec ID   (1=H264, 2=VP9, 3=VP8, 4=AV1, 5=Opus audio)
+Byte 1:    flags      (bit 0 = isKeyframe; always 0 for audio)
+Bytes 2+:  raw payload (e.g. H264 Annex B NAL units, or one raw Opus packet)
 ```
+
+The browser routes any frame starting with `5` to the audio player and everything else to the video decoder (`RemoteScreen.tsx`).
+
+---
+
+## Audio Frames
+
+Audio is carried in `Message { audio_frame: AudioFrame { bytes data } }` — one raw Opus packet per message (RFC 6716, no Ogg container). The host also announces its format in `Misc { audio_format: AudioFormat { sample_rate, channels } }`.
+
+The gateway forwards the packet as marker byte `5` + one unused flag byte + the Opus packet, and forwards the format as JSON `{type:"audio_format", sampleRate, channels}`. The browser feeds the packet to WebCodecs `AudioDecoder` (codec `"opus"`) and schedules the decoded buffers on the Web Audio clock. `AudioDecoder` only supports 1–2 channels, and the player ignores formats outside that range.
+
+Audio can be switched off per session at login: `OptionMessage.disable_audio` is a `BoolOption` (`NotSet=0`, `No=1`, `Yes=2`) where the gateway sends `No` (1) — i.e. *do not disable audio*, which is what makes the host stream it. `Yes` (2) would turn audio off.
 
 ---
 
@@ -358,26 +384,23 @@ Bytes 2+:  raw frame bitstream (e.g. H264 Annex B NAL units)
 ```proto
 message MouseEvent {
   int32 mask = 1;
-  // mask encoding:
-  // bits 0-2: button (0=none, 1=left, 2=right, 3=middle)
-  // bit  3:   down=1/up=0 (for button events)
-  // bit  4:   scroll
-  // bits 5-6: scroll direction/amount (when bit4=1)
+  // mask = (button << 3) | event_type, as the gateway builds it in RemoteScreen.tsx:
+  // event_type: 0 = move, 1 = down, 2 = up, 3 = wheel
+  // button bits: 0x01 = left, 0x02 = right, 0x04 = middle
   
-  sint32 x = 2;   // absolute x in remote screen pixels
-  sint32 y = 3;   // absolute y
+  sint32 x = 2;   // absolute x in remote screen pixels (0 for wheel events)
+  sint32 y = 3;   // absolute y; for wheel events: -1 = scroll down, +1 = scroll up
   repeated ControlKey modifiers = 4;
 }
 ```
 
-Common mask values:
-- `0` — mouse move (no buttons)
-- `1` — left button down
-- `9` — left button up (1 | 8)
-- `2` — right button down
-- `10` — right button up (2 | 8)
-- `0x11` — scroll down
-- `0x12` — scroll up (approximately)
+Common mask values (as sent by this client):
+- `0` — mouse move
+- `0x09` — left button down (1<<3 | 1)
+- `0x0A` — left button up (1<<3 | 2)
+- `0x11` — right button down (2<<3 | 1)
+- `0x12` — right button up (2<<3 | 2)
+- `3` — wheel (`MOUSE_TYPE_WHEEL`), with `y` carrying the direction
 
 ### Key Event
 ```proto
@@ -391,24 +414,35 @@ message KeyEvent {
     string     seq         = 6;  // key sequence
   }
   repeated ControlKey modifiers = 8;
-  KeyboardMode mode = 9;  // use MAP (1) for most cases
+  KeyboardMode mode = 9;  // use Legacy (0) — what this gateway sends
 }
 ```
 
-Key `ControlKey` enum values (partial — see proto for full list):
+Key `ControlKey` enum values (from `gateway/src/proto/message.proto` — note `Unknown=0`, so values start at 1):
 ```
-Alt=0, Backspace=1, CapsLock=2, Control=3, Delete=4, DownArrow=5,
-End=6, Escape=7, F1=8..F12=19, Home=20, LeftArrow=22, Meta=23,
-PageDown=24, PageUp=25, Return=26, RightArrow=27, Shift=28,
-Space=29, Tab=30, UpArrow=31
+Alt=1, Backspace=2, CapsLock=3, Control=4, Delete=5, DownArrow=6,
+End=7, Escape=8, F1=9, F10=10, F11=11, F12=12, F2=13..F9=20,
+Home=21, LeftArrow=22, Meta=23, PageDown=25, PageUp=26, Return=27,
+RightArrow=28, Shift=29, Space=30, Tab=31, UpArrow=32
 ```
+
+### What this client actually sends (`gateway/src/utils/keymap.ts`)
+
+| Input | Encoding |
+|---|---|
+| Named/control keys (arrows, Enter, Tab, F1–F12, …) | `control_key` + `modifiers`, `mode: 0` |
+| Printable characters, no Ctrl/Alt | `unicode` = `key.charCodeAt(0)`, sent on **keydown only** |
+| Printable characters with Ctrl or Alt | `chr` = browser `keyCode` (Windows virtual-key code), down and up |
+| Dead / Unidentified / multi-character keys | nothing (payload is `null`, the gateway skips it) |
+
+Modifiers map `ctrl→4`, `alt→1`, `shift→29`, `meta→23`.
 
 ---
 
 ## Codec Negotiation Summary
 
-The remote machine will encode video using the **best codec** that all connected clients support. If the gateway declares H264 support, the remote will use H264 (hardware-encoded if GPU is available). This is the best option for browser compatibility.
+The remote machine encodes video with a codec both sides support. The gateway declares VP8, VP9, H264 and AV1 and sets `prefer: 2` (H264), which is the best fit for browser compatibility and hardware decode.
 
-If the remote machine does **not** have H264 hardware encoding, it will fall back to VP9 (software). Both are handled by WebCodecs.
+If the host cannot encode H264 it may choose another declared codec (for example VP9 in software). The browser decoder is configured from the binary frame's codec byte, so all four declared codecs are decodable.
 
-**Gateway should always declare**: VP8=1, VP9=1, H264=1, AV1=1 in `SupportedDecoding`.
+Caveat: `session.ts` reports `codec: "h264"` to the browser in the `connected` message regardless of what the host picked — useful to know when debugging a codec mismatch (see KI-003).
