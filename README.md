@@ -9,7 +9,7 @@ control a machine from a browser on a computer where you cannot install anything
 [![CI](https://img.shields.io/github/actions/workflow/status/linkzy/rustdesk-custom-web-client/ci.yml?branch=main&label=CI)](https://github.com/linkzy/rustdesk-custom-web-client/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 [![good first issues](https://img.shields.io/github/issues/linkzy/rustdesk-custom-web-client/good%20first%20issue?label=good%20first%20issues)](https://github.com/linkzy/rustdesk-custom-web-client/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)
-[![version](https://img.shields.io/github/v/tag/linkzy/rustdesk-custom-web-client?label=version)](https://github.com/linkzy/rustdesk-custom-web-client/tags)
+[![version](https://img.shields.io/github/v/release/linkzy/rustdesk-custom-web-client?label=version)](https://github.com/linkzy/rustdesk-custom-web-client/releases)
 
 > **Try it: [rclient-demo.linkzy.dev](https://rclient-demo.linkzy.dev)**
 >
