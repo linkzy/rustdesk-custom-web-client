@@ -15,19 +15,20 @@ each kind of reader to the right document — then pick something from
 | You want to… | Do this |
 |---|---|
 | **Report a bug** | Open a [bug report](https://github.com/linkzy/rustdesk-custom-web-client/issues/new?template=bug_report.yml). Fill in the browser, host OS, RustDesk version and relay type — without them the report usually can't be reproduced. |
-| **Ask a question** | Open an issue with the `question` label. GitHub Discussions are not enabled on this repository yet; if they are turned on later, this page will say so. Please don't disguise a question as a bug report. |
-| **Propose a feature** | Open a [feature request](https://github.com/linkzy/rustdesk-custom-web-client/issues/new?template=feature_request.yml). Say what problem it solves for you. |
-| **Send a fix** | Comment on the issue you want to take, then open a pull request. That avoids two people writing the same patch. |
+| **Ask a question** | Ask in [Discussions → Q&A](https://github.com/linkzy/rustdesk-custom-web-client/discussions). Please don't disguise a question as a bug report. |
+| **Propose a feature** | Open a [feature request](https://github.com/linkzy/rustdesk-custom-web-client/issues/new?template=feature_request.yml) — or float the idea in [Discussions → Ideas](https://github.com/linkzy/rustdesk-custom-web-client/discussions) first if it is still rough. Say what problem it solves for you. |
+| **Send a fix** | Find an open issue (start with [`good first issue`](https://github.com/linkzy/rustdesk-custom-web-client/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)), comment to claim it, then open a pull request. That avoids two people writing the same patch. |
 | **Improve the docs** | Same as a fix — docs are code here, and wrong docs are treated as bugs. |
-| **Share a setup** | A relay/host combination that works well (or badly) is useful context — put it in a `question` issue. |
+| **Share a setup** | A relay/host combination that works well (or badly) is useful context — post it in Discussions. |
 
 Labels you will see: `bug`, `enhancement`, `documentation`, `question`,
 `duplicate`, `invalid`, `wontfix`, plus the two entry points for newcomers —
 `good first issue` and `help wanted`.
 
-The roadmap lives in [`docs/TASKS.md`](./docs/TASKS.md) and is being published as
-GitHub issues; until an item has an issue, treat the table in that file as
-current. Do not start a large feature without agreeing on it in an issue first.
+The roadmap lives in [`docs/TASKS.md`](./docs/TASKS.md) and each milestone is
+published as GitHub issues and milestones. If an item there has no issue yet,
+treat the table as current. Do not start a large feature without agreeing on it in
+an issue first.
 
 ---
 
