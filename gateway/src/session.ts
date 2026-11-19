@@ -1,17 +1,18 @@
-import * as crypto from 'crypto';
 import nacl from 'tweetnacl';
 import WebSocket from 'ws';
 import { loadProtos, encodeMessage, decodeMessage } from './utils/proto';
+import { hashPassword, makeNonce, SeqCounter } from './utils/crypto';
+import {
+  CODEC_H264,
+  CODEC_VP9,
+  CODEC_VP8,
+  CODEC_AV1,
+  buildVideoPacket,
+  buildAudioPacket,
+} from './utils/frames';
 import { performRendezvous } from './rendezvous';
 import { connectRelay, RelayConnection } from './relay';
 import type * as protobuf from 'protobufjs';
-
-// Codec IDs for the binary frame header sent to the browser
-const CODEC_H264  = 1;
-const CODEC_VP9   = 2;
-const CODEC_VP8   = 3;
-const CODEC_AV1   = 4;
-const CODEC_AUDIO = 5; // Opus audio
 
 export interface ServerConfig {
   hbbsHost?: string;  // e.g. "myserver.com:21118" or just "myserver.com"
@@ -31,8 +32,8 @@ export class Session {
   private root: protobuf.Root | null = null;
   private symmetricKey: Uint8Array | null = null;
   private ourKeypair: nacl.BoxKeyPair = nacl.box.keyPair();
-  private sendSeq = 0n;
-  private recvSeq = 0n;
+  private sendSeq = new SeqCounter();
+  private recvSeq = new SeqCounter();
   private options: SessionOptions;
   private remoteWidth = 0;
   private remoteHeight = 0;
@@ -88,10 +89,10 @@ export class Session {
 
       // If we have a symmetric key, decrypt first
       if (this.symmetricKey) {
-        const nonce = this.makeNonce(++this.recvSeq);
+        const nonce = makeNonce(this.recvSeq.next());
         const decrypted = nacl.secretbox.open(bytes, nonce, this.symmetricKey);
         if (!decrypted) {
-          console.error('[session] Failed to decrypt message (seq=' + this.recvSeq + ')');
+          console.error('[session] Failed to decrypt message (seq=' + this.recvSeq.value + ')');
           return;
         }
         bytes = decrypted;
@@ -152,7 +153,7 @@ export class Session {
     const challenge = toBuffer(hash.challenge);
     console.log(`[session] Hash: salt=${salt.toString('hex')} challenge=${challenge.toString('hex')}`);
 
-    const passwordBytes = this.hashPassword(salt, challenge, this.options.password);
+    const passwordBytes = hashPassword(salt, challenge, this.options.password);
 
     // RustDesk server checks: username must equal the target machine's own ID,
     // or be an IP/domain — empty string triggers LOGIN_MSG_OFFLINE.
@@ -314,8 +315,8 @@ export class Session {
 
       // Store sym key — all subsequent messages from peer will be encrypted with it
       this.symmetricKey = symKey;
-      this.recvSeq = 0n;
-      this.sendSeq = 0n;
+      this.recvSeq.reset();
+      this.sendSeq.reset();
       console.log('[session] Sent PublicKey with symmetric key. Session encryption active.');
     } catch (e) {
       console.error('[session] handleSignedId failed:', e);
@@ -353,13 +354,7 @@ export class Session {
 
     for (const f of frames) {
       const frameData = Buffer.from(f.data, 'base64');
-      const isKey = f.key ? 1 : 0;
-
-      // Build binary packet: [codecId][flags][...frameData]
-      const packet = Buffer.alloc(2 + frameData.length);
-      packet[0] = codecId;
-      packet[1] = isKey;
-      frameData.copy(packet, 2);
+      const packet = buildVideoPacket(codecId, !!f.key, frameData);
 
       if (this.options.browserWs.readyState === WebSocket.OPEN) {
         this.options.browserWs.send(packet);
@@ -375,10 +370,7 @@ export class Session {
     const opus = Buffer.from(frame.data, 'base64');
     if (opus.length === 0) return;
 
-    const packet = Buffer.alloc(2 + opus.length);
-    packet[0] = CODEC_AUDIO;
-    packet[1] = 0;
-    opus.copy(packet, 2);
+    const packet = buildAudioPacket(opus);
 
     if (this.options.browserWs.readyState === WebSocket.OPEN) {
       this.options.browserWs.send(packet);
@@ -391,7 +383,7 @@ export class Session {
     let bytes = encodeMessage(this.root, payload);
 
     if (this.symmetricKey) {
-      const nonce = this.makeNonce(++this.sendSeq);
+      const nonce = makeNonce(this.sendSeq.next());
       bytes = nacl.secretbox(bytes, nonce, this.symmetricKey);
     }
 
@@ -406,30 +398,6 @@ export class Session {
     this.relay?.close();
     this.relay = null;
     console.log('[session] Disconnected');
-  }
-
-  private hashPassword(salt: Buffer, challenge: Buffer, password: string): Uint8Array {
-    // RustDesk algorithm (from client.rs handle_hash):
-    // Step 1: intermediate = SHA256(password_string + salt_bytes)
-    const intermediate = crypto.createHash('sha256')
-      .update(Buffer.from(password, 'utf8'))
-      .update(salt)
-      .digest();
-
-    // Step 2: final = SHA256(intermediate + challenge_bytes)
-    const final = crypto.createHash('sha256')
-      .update(intermediate)
-      .update(challenge)
-      .digest();
-
-    return new Uint8Array(final);
-  }
-
-  private makeNonce(seqnum: bigint): Uint8Array {
-    const nonce = new Uint8Array(24);
-    const view = new DataView(nonce.buffer);
-    view.setBigUint64(0, seqnum, true); // little-endian
-    return nonce;
   }
 
   private sendBrowserJson(obj: Record<string, unknown>): void {
