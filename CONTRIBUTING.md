@@ -43,11 +43,12 @@ an issue first.
    direction, `video_ack_required: false`, password hash order) break sessions in
    ways that look like unrelated bugs. If you touch `gateway/src/session.ts`,
    read [`docs/KNOWN_ISSUES.md`](./docs/KNOWN_ISSUES.md) too.
-3. **Check the state of the checks.** `npm run build` passes in both packages
-   today. `npm run lint` in `web/` currently fails on four pre-existing
-   `react-hooks` errors, and the gateway's `lint` script cannot run because
-   `eslint` is not a dependency there. Don't be surprised — and don't "fix" it
-   with a broad reformat that hides real changes.
+3. **Run the checks.** From the repo root: `npm test`, `npm run typecheck`,
+   `npm run build`, and `npm run lint`. The first three pass. The one red check is
+   `web` lint: four `react-hooks` errors in `RemoteScreen.tsx` and
+   `ConnectForm.tsx` (an open issue). CI runs the same four in that order on every
+   PR, so you will see it fail — that is expected, not your change. Please don't
+   hide it with a broad reformat or a disabled rule in an unrelated PR.
 
 > **Protocol work needs a real RustDesk host.** There is no fake host yet, so
 > changes to `session.ts`, `rendezvous.ts`, `relay.ts` or `keymap.ts` can only be
@@ -80,13 +81,16 @@ an issue first.
 
 ### Checklist
 
-- [ ] `npm run build` passes in `gateway/` and in `web/` (or the PR says which
-      one does not, and why).
+- [ ] `npm test`, `npm run typecheck` and `npm run build` pass (or the PR says
+      which one does not, and why). `npm run lint` is red on `web` for the known
+      `react-hooks` issue; a PR that adds *new* lint errors is not ready.
+- [ ] New behaviour has a unit test where it can have one — `gateway/src/**/*.test.ts`
+      (node) or `web/src/**/*.test.ts` (jsdom).
 - [ ] No secrets, `.env` files, server IPs, keys or passwords in the diff.
       The password may only be persisted through the "Remember password" opt-in
       (`web/src/utils/passwordStorage.ts`) — never store it anywhere else.
-- [ ] Tests or manual verification described; protocol changes state the
-      RustDesk host and relay they were tried against.
+- [ ] Manual verification described for anything the unit tests cannot reach;
+      protocol changes state the RustDesk host and relay they were tried against.
 - [ ] Docs updated for anything user-visible.
 - [ ] The PR links the issue it closes (`Closes #123`).
 

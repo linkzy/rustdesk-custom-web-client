@@ -21,27 +21,37 @@ The RustDesk relay itself is **not** in this repo.
 ## Commands
 
 ```bash
-# gateway
+# from the repo root (no dependencies at the root; it forwards to both packages)
+npm run install:all   # npm ci in gateway/ then web/
+npm test              # vitest in both: 24 gateway + 25 web
+npm run typecheck     # tsc in both
+npm run lint          # eslint in both (web has 4 open react-hooks errors)
+npm run build         # both
+
+# gateway alone
 cd gateway && npm ci
 npm run dev        # ts-node-dev, watches src/
 npm run build      # tsc → dist/
 npm run start      # node dist/server.js
-# (the "lint" script exists in package.json but eslint is not a dependency yet,
-#  so it fails; only `npm run build` works today)
+npm test           # vitest (node env)
 
-# web
+# web alone
 cd web && npm ci
 npm run dev        # Vite on :5173, proxies /ws → ws://localhost:4000
 npm run build      # tsc -b && vite build
-npm run lint       # eslint . — fails today on 4 pre-existing react-hooks
-                   # errors (RemoteScreen refs, ConnectForm captcha effect)
+npm test           # vitest + jsdom
+npm run lint       # eslint . — fails today on 4 open react-hooks errors
+                   # (RemoteScreen refs during render, ConnectForm captcha effect)
 
 # whole stack
 docker compose up -d              # from source
 docker compose -f docker-compose.prod.yml up -d   # prebuilt images
 ```
 
-Node 22+ is what the Dockerfiles use. `.env.example` and `gateway/.env.example` list every variable; ports and defaults are in the root README.
+CI (`.github/workflows/ci.yml`) runs lint → typecheck → test → build on every pull
+request and on `main`, so the web lint failure is a red check until it is fixed.
+
+Node 22 is what the Dockerfiles, `.nvmrc` and CI use. `.env.example` and `gateway/.env.example` list every variable; ports and defaults are in the root README.
 
 ## Top protocol pitfalls
 
@@ -56,7 +66,7 @@ Read [`docs/AI_GUIDELINES.md`](./docs/AI_GUIDELINES.md) before touching `gateway
 
 - The password may only be written to `localStorage` behind the "Remember password" opt-in, and only after a successful connection (`web/src/utils/passwordStorage.ts`). No secrets in logs.
 - Never commit `.env` files, server addresses or keys.
-- Verify before marking something done: a build, a lint, or a traced run — not an assumption.
+- Verify before marking something done: run the checks — `npm test`, `npm run typecheck`, `npm run build` (and `npm run lint`, currently red on web). A traced run beats an assumption.
 
 ## Where to go next
 
