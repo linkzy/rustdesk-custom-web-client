@@ -167,9 +167,9 @@
       "imposedBy": "HMN",
       "confirmation": "checked-by-agent",
       "status": "partial",
-      "current": "T13 added the missing pieces of the check set: gateway now has a real eslint setup (gateway/eslint.config.mjs + devDeps) so `npm run lint` exits 0, and .github/workflows/ci.yml runs lint, typecheck, test and build for both packages on PRs and main. Still partial: web's `npm run lint` exits 1 with 4 pre-existing react-hooks errors (RemoteScreen ref writes during render, ConnectForm setState in effect), so the project's own lint check does not pass yet.",
-      "check": "From a clean checkout: `npm ci && npm run lint` in gateway/ and web/, plus `npm run typecheck`, `npm test`, `npm run build` in each; or just read the CI run on main.",
-      "updatedAt": 1795119227557,
+      "current": "Diverges: on main be5cc98, CI run #1 shows gateway fully green (install, lint, typecheck, 24 tests, build) but the web job fails at Lint with the 4 pre-existing react-hooks errors, so the project's own lint check does not pass for the whole repo yet (web typecheck/test/build would pass; they are skipped after the lint failure).",
+      "check": "Read the latest CI run on main: the gateway job must be all green and the web job must not fail at Lint.",
+      "updatedAt": 1795119428347,
       "updatedBy": "ci"
     },
     {
