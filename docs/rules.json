@@ -171,6 +171,26 @@
       "check": "npm test, npm run typecheck, npm run lint, npm run build from the root all exit 0, locally and in the pull-request CI.",
       "updatedAt": 1795118372396,
       "updatedBy": "core"
+    },
+    {
+      "id": "PROJ-007",
+      "area": "PROJ",
+      "stage": "A",
+      "text": "When a check fails, it is reported as failing. Steps are not removed, skipped or softened to make CI look green.",
+      "action": "CI keeps the lint step in both packages; a red run is reported as red and fixed at the source.",
+      "citations": [
+        {
+          "source": "HUM",
+          "location": "Reply to the Phase 1 plan proposal",
+          "excerpt": "the least thing i want it to be is miss leading"
+        }
+      ],
+      "imposedBy": "HMN",
+      "confirmation": "checked-by-agent",
+      "status": "partial",
+      "current": "CI exists with lint in both jobs (T13), but web lint fails on 4 pre-existing react-hooks errors until the fixes land; the workflow is shipped with the step intact.",
+      "updatedAt": 1795119096294,
+      "updatedBy": "core"
     }
   ]
 }
