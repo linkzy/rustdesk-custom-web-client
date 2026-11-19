@@ -150,6 +150,27 @@
       "current": "README.md currently has no hero visual at all (no screenshot, no GIF); the live-demo link sits under the tagline. Static screenshots were never committed to this branch. T20 (blocked) holds the replacement plan: a Playwright-recorded GIF/video once the Phase 2 fake RustDesk host exists.",
       "updatedAt": 1795116647987,
       "updatedBy": "scribe"
+    },
+    {
+      "id": "PROJ-006",
+      "area": "PROJ",
+      "stage": "A",
+      "text": "A change counts as done only when the project's own checks prove it: unit tests, typecheck, lint and build pass before it is called finished.",
+      "action": "Helpers verify with the project's check commands and report the exact commands and results; CI (T13) enforces the same checks on every pull request.",
+      "citations": [
+        {
+          "source": "RDM",
+          "location": "docs/AI_GUIDELINES.md (project status / verify note)",
+          "excerpt": "When completing a task, verify it by running the relevant unit test or manually tracing the logic."
+        }
+      ],
+      "imposedBy": "HMN",
+      "confirmation": "checked-by-agent",
+      "status": "partial",
+      "current": "Both packages have vitest (gateway 24, web 19) and typecheck/build pass; lint does not pass yet (gateway has no eslint, web has 4 pre-existing react-hooks errors) and CI does not run on pull requests — T13 fixes both.",
+      "check": "npm test, npm run typecheck, npm run lint, npm run build from the root all exit 0, locally and in the pull-request CI.",
+      "updatedAt": 1795118372396,
+      "updatedBy": "core"
     }
   ]
 }
