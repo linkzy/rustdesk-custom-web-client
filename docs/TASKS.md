@@ -50,10 +50,9 @@ Everything a stranger needs to trust and try the repo. Mostly Phase 1 leftovers.
 | R-24 | Keyboard shortcut help overlay | Nothing in the app explains what is forwarded and what is not. | new `web/src/components/ShortcutHelp.tsx` | easy | good first issue |
 
 **Already landed for this milestone** (not issues): the vitest suite in both
-packages (`npm test`, 24 gateway + 25 web) and CI on pull requests
-(`.github/workflows/ci.yml`, lint → typecheck → test → build). The one red check is
-`web` lint, tracked by the open `react-hooks` issue in `RemoteScreen.tsx` /
-`ConnectForm.tsx`.
+packages (`npm test`, 24 gateway + 25 web), CI on pull requests
+(`.github/workflows/ci.yml`, lint → typecheck → test → build) and the lint fixes
+that make that pipeline green.
 
 ---
 
@@ -127,5 +126,5 @@ RustDesk host, protocol insight, or more than a day's work.
 - The most error-prone areas are: encryption (seqnum sync, nonce format), password hashing order, TestDelay echo direction (`from_client: false`), and `video_ack_required: false`
 - Keep the gateway stateful per session — each browser connection maps to exactly one relay connection
 - **Never commit `.env` files** — use `.env.example` with placeholder values only
-- `npm test`, `npm run typecheck` and `npm run build` pass in both packages. `npm run lint` passes in `gateway/` and fails in `web/` on four `react-hooks` errors (`RemoteScreen.tsx` writes refs during render; `ConnectForm.tsx` calls `setCaptchaToken` inside an effect) — that is the one open red check, tracked as its own issue.
+- `npm test`, `npm run typecheck`, `npm run lint` and `npm run build` all pass in both packages; CI runs the same four on every pull request and on `main`.
 - The suite pins the pure parts (hashing, nonces, framing, key mapping, storage rules); a real session still needs a RustDesk host and relay.

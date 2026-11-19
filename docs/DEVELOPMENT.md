@@ -146,11 +146,10 @@ lint → typecheck → test → build.
 
 | Command | State today |
 |---|---|
-| `npm run build` | Passes in both packages. |
+| `npm run lint` | Passes in both packages. |
 | `npm run typecheck` | Passes in both. |
 | `npm test` | Passes: 24 tests in `gateway/`, 25 in `web/`. |
-| `gateway` lint | Passes (`eslint` is a devDependency there now). |
-| `web` lint | **Fails** on four `react-hooks` errors: `RemoteScreen.tsx` writes three refs during render, `ConnectForm.tsx` calls `setCaptchaToken` inside an effect. This is the one red check in CI; it is tracked, not hidden. |
+| `npm run build` | Passes in both packages. |
 
 ### What the tests cover
 

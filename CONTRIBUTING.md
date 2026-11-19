@@ -43,12 +43,9 @@ an issue first.
    direction, `video_ack_required: false`, password hash order) break sessions in
    ways that look like unrelated bugs. If you touch `gateway/src/session.ts`,
    read [`docs/KNOWN_ISSUES.md`](./docs/KNOWN_ISSUES.md) too.
-3. **Run the checks.** From the repo root: `npm test`, `npm run typecheck`,
-   `npm run build`, and `npm run lint`. The first three pass. The one red check is
-   `web` lint: four `react-hooks` errors in `RemoteScreen.tsx` and
-   `ConnectForm.tsx` (an open issue). CI runs the same four in that order on every
-   PR, so you will see it fail — that is expected, not your change. Please don't
-   hide it with a broad reformat or a disabled rule in an unrelated PR.
+3. **Run the checks.** From the repo root: `npm run lint`, `npm run typecheck`,
+   `npm test` and `npm run build`. All four pass today and CI runs the same four in
+   that order on every PR, so a red check means something in your change.
 
 > **Protocol work needs a real RustDesk host.** There is no fake host yet, so
 > changes to `session.ts`, `rendezvous.ts`, `relay.ts` or `keymap.ts` can only be
@@ -81,9 +78,8 @@ an issue first.
 
 ### Checklist
 
-- [ ] `npm test`, `npm run typecheck` and `npm run build` pass (or the PR says
-      which one does not, and why). `npm run lint` is red on `web` for the known
-      `react-hooks` issue; a PR that adds *new* lint errors is not ready.
+- [ ] `npm run lint`, `npm run typecheck`, `npm test` and `npm run build` pass (or
+      the PR says which one does not, and why).
 - [ ] New behaviour has a unit test where it can have one — `gateway/src/**/*.test.ts`
       (node) or `web/src/**/*.test.ts` (jsdom).
 - [ ] No secrets, `.env` files, server IPs, keys or passwords in the diff.

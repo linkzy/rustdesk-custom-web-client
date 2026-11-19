@@ -25,7 +25,7 @@ The RustDesk relay itself is **not** in this repo.
 npm run install:all   # npm ci in gateway/ then web/
 npm test              # vitest in both: 24 gateway + 25 web
 npm run typecheck     # tsc in both
-npm run lint          # eslint in both (web has 4 open react-hooks errors)
+npm run lint          # eslint in both
 npm run build         # both
 
 # gateway alone
@@ -40,8 +40,7 @@ cd web && npm ci
 npm run dev        # Vite on :5173, proxies /ws → ws://localhost:4000
 npm run build      # tsc -b && vite build
 npm test           # vitest + jsdom
-npm run lint       # eslint . — fails today on 4 open react-hooks errors
-                   # (RemoteScreen refs during render, ConnectForm captcha effect)
+npm run lint       # eslint .
 
 # whole stack
 docker compose up -d              # from source
@@ -49,7 +48,7 @@ docker compose -f docker-compose.prod.yml up -d   # prebuilt images
 ```
 
 CI (`.github/workflows/ci.yml`) runs lint → typecheck → test → build on every pull
-request and on `main`, so the web lint failure is a red check until it is fixed.
+request and on `main`; all five checks pass today.
 
 Node 22 is what the Dockerfiles, `.nvmrc` and CI use. `.env.example` and `gateway/.env.example` list every variable; ports and defaults are in the root README.
 
@@ -66,7 +65,7 @@ Read [`docs/AI_GUIDELINES.md`](./docs/AI_GUIDELINES.md) before touching `gateway
 
 - The password may only be written to `localStorage` behind the "Remember password" opt-in, and only after a successful connection (`web/src/utils/passwordStorage.ts`). No secrets in logs.
 - Never commit `.env` files, server addresses or keys.
-- Verify before marking something done: run the checks — `npm test`, `npm run typecheck`, `npm run build` (and `npm run lint`, currently red on web). A traced run beats an assumption.
+- Verify before marking something done: run the checks — `npm test`, `npm run typecheck`, `npm run lint` and `npm run build` all pass today, and CI runs the same four on every PR. A traced run beats an assumption.
 
 ## Where to go next
 
