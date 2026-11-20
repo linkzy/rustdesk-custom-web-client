@@ -13,7 +13,10 @@
     />
     <link rel="canonical" href="https://rclient-demo.linkzy.dev/" />
     <meta name="theme-color" content="#0f172a" />
-    <meta name="color-scheme" content="dark" />
+    <!-- Both palettes are supported; `index.css` sets color-scheme per theme and
+         main.tsx applies data-theme before first paint. Before that CSS lands this
+         hint lets the UA pick by prefers-color-scheme instead of forcing dark. -->
+    <meta name="color-scheme" content="dark light" />
 
     <!-- Open Graph -->
     <meta property="og:type" content="website" />
