@@ -321,6 +321,27 @@
       "check": "For every fork PR: at most one round of optional asks; small fixes become maintainer tasks.",
       "updatedAt": 1795134848594,
       "updatedBy": "core"
+    },
+    {
+      "id": "PROJ-014",
+      "area": "PROJ",
+      "stage": "A",
+      "text": "main is protected: the gateway and web checks must pass before a pull request merges (branch must also be up to date), force-pushes and branch deletion are blocked, and admins keep direct-push rights.",
+      "action": "Branch protection configured on the GitHub repo; change it only with the owner's decision.",
+      "citations": [
+        {
+          "source": "HUM",
+          "location": "Answer to Q9",
+          "excerpt": "Checks required, admins may still push directly"
+        }
+      ],
+      "imposedBy": "HMN",
+      "confirmation": "found",
+      "status": "done",
+      "current": "Met: required_status_checks strict with contexts [gateway, web]; allow_force_pushes false; allow_deletions false; enforce_admins false.",
+      "check": "GitHub repo settings -> Branches -> main shows the two required checks and force-push/deletion blocked.",
+      "updatedAt": 1795144532299,
+      "updatedBy": "core"
     }
   ]
 }
