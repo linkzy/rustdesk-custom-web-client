@@ -300,6 +300,27 @@
       "check": "A fork PR has a comment with a security verdict naming what was checked, and no merge happened on CI status alone.",
       "updatedAt": 1795130901885,
       "updatedBy": "core"
+    },
+    {
+      "id": "PROJ-013",
+      "area": "PROJ",
+      "stage": "A",
+      "text": "Contributions are met with the lowest reasonable bar, not the highest. Review asks must be things that genuinely block merge; anything small and safe is fixed by the maintainer after merging, with a thank-you, so a first-time contributor is never left with homework on a good-first-issue.",
+      "action": "When a fork PR is safe and passes checks, merge it, fix small polish ourselves in a follow-up task, and ask the human first if a review would need more than one round of requests.",
+      "citations": [
+        {
+          "source": "HUM",
+          "location": "Chat reply after PR #35 review",
+          "excerpt": "our demand is high, the offer is low... we should be more open is situations like this... for this one for example, i could fix the to small things your self and merge with a thank you note"
+        }
+      ],
+      "imposedBy": "HMN",
+      "confirmation": "found",
+      "status": "done",
+      "current": "Met for #35: merged as-is after the reviews, both small fixes taken on as T25 by the maintainer, contributor thanked and pointed at further issues.",
+      "check": "For every fork PR: at most one round of optional asks; small fixes become maintainer tasks.",
+      "updatedAt": 1795134848594,
+      "updatedBy": "core"
     }
   ]
 }
