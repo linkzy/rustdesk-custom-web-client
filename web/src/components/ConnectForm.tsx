@@ -17,6 +17,8 @@ import {
   normalizeServerConfig,
 } from '../utils/connectForm';
 import type { ServerConfig } from '../utils/connectForm';
+import { ThemeSelect } from './ThemeSelect';
+import type { ThemePreference } from '../utils/theme';
 
 export type { ServerConfig };
 
@@ -43,9 +45,11 @@ interface ConnectFormProps {
   error: string | null;
   showDebug: boolean;
   onShowDebugChange: (v: boolean) => void;
+  theme: ThemePreference;
+  onThemeChange: (t: ThemePreference) => void;
 }
 
-export function ConnectForm({ onConnect, onDisconnect, status, error, showDebug, onShowDebugChange }: ConnectFormProps) {
+export function ConnectForm({ onConnect, onDisconnect, status, error, showDebug, onShowDebugChange, theme, onThemeChange }: ConnectFormProps) {
   const [targetId, setTargetId]   = useState(() => localStorage.getItem(LS_ID_KEY)   ?? '');
   // The password is only read back from localStorage when the user opted in with
   // "Remember password"; the preference itself is remembered across visits.
@@ -146,6 +150,9 @@ export function ConnectForm({ onConnect, onDisconnect, status, error, showDebug,
 
   return (
     <div className={styles.container}>
+      <div className={styles.themeRow}>
+        <ThemeSelect className={styles.themeSelect} value={theme} onChange={onThemeChange} />
+      </div>
       <div className={styles.logo}>
         <span className={styles.logoIcon}>🖥️</span>
         <h1 className={styles.title}>rclient</h1>

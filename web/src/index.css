@@ -1,3 +1,117 @@
+/*
+ * Colour tokens. The dark palette is the default; `[data-theme="light"]` is
+ * applied to <html> by utils/theme.ts. Module CSS must reference these
+ * variables and never a hex literal. Text pairs are checked for WCAG AA
+ * (4.5:1) in utils/theme.test.ts.
+ */
+:root {
+  color-scheme: dark;
+
+  --color-body-bg: #1a1a2e;
+  --color-body-text: #eee;
+  --color-page: #0f172a;
+  --color-surface: #1e293b;
+  --color-surface-alt: #0f172a;
+  --color-border: #334155;
+  --color-border-strong: #475569;
+  --color-control: #334155;
+  --color-control-hover: #475569;
+  --color-control-text: #cbd5e1;
+  --color-text: #e2e8f0;
+  --color-text-soft: #cbd5e1;
+  --color-text-muted: #94a3b8;
+  --color-text-subtle: #94a3b8;
+  --color-primary: #2563eb;
+  --color-primary-hover: #1d4ed8;
+  --color-primary-active: #1d4ed8;
+  --color-primary-active-hover: #2563eb;
+  --color-primary-border: #3b82f6;
+  --color-on-primary: #ffffff;
+  --color-accent: #3b82f6;
+  --color-focus: #60a5fa;
+  --color-focus-ring: rgba(59, 130, 246, 0.35);
+  --color-spinner-track: rgba(255, 255, 255, 0.3);
+  --color-danger: #dc2626;
+  --color-danger-hover: #b91c1c;
+  --color-danger-border: #ef4444;
+  --color-danger-text: #f87171;
+  --color-warn-text: #fbbf24;
+  --color-warn-border: #f59e0b;
+  --color-ok-text: #4ade80;
+  --color-ok-border: #22c55e;
+  --color-canvas: #000000;
+
+  /* Debug panel and stats overlay sit on top of the video. */
+  --color-overlay: rgba(0, 0, 0, 0.75);
+  --color-overlay-strong: rgba(0, 0, 0, 0.92);
+  --color-overlay-soft: rgba(0, 0, 0, 0.72);
+  --color-overlay-text: #e0e0e0;
+  --color-overlay-muted: #888;
+  --color-overlay-border: rgba(255, 255, 255, 0.08);
+  --color-overlay-divider: #333;
+  --color-overlay-row-divider: #111;
+  --color-debug-fg: #0f0;
+  --color-debug-fg-ink: #000;
+  --color-debug-input-bg: #1a1a1a;
+  --color-debug-text: #ccc;
+  --color-stat-good: #4caf50;
+  --color-stat-warn: #ff9800;
+  --color-stat-bad: #f44336;
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+
+  --color-body-bg: #f8fafc;
+  --color-body-text: #0f172a;
+  --color-page: #f8fafc;
+  --color-surface: #ffffff;
+  --color-surface-alt: #f1f5f9;
+  --color-border: #cbd5e1;
+  --color-border-strong: #94a3b8;
+  --color-control: #e2e8f0;
+  --color-control-hover: #cbd5e1;
+  --color-control-text: #1e293b;
+  --color-text: #0f172a;
+  --color-text-soft: #334155;
+  --color-text-muted: #334155;
+  --color-text-subtle: #475569;
+  --color-primary: #1d4ed8;
+  --color-primary-hover: #1e40af;
+  --color-primary-active: #1d4ed8;
+  --color-primary-active-hover: #1e40af;
+  --color-primary-border: #2563eb;
+  --color-on-primary: #ffffff;
+  --color-accent: #2563eb;
+  --color-focus: #2563eb;
+  --color-focus-ring: rgba(37, 99, 235, 0.35);
+  --color-danger: #b91c1c;
+  --color-danger-hover: #991b1b;
+  --color-danger-border: #dc2626;
+  --color-danger-text: #b91c1c;
+  --color-warn-text: #92400e;
+  --color-warn-border: #d97706;
+  --color-ok-text: #166534;
+  --color-ok-border: #16a34a;
+  --color-canvas: #000000;
+
+  --color-overlay: rgba(255, 255, 255, 0.92);
+  --color-overlay-strong: rgba(255, 255, 255, 0.97);
+  --color-overlay-soft: rgba(255, 255, 255, 0.88);
+  --color-overlay-text: #0f172a;
+  --color-overlay-muted: #475569;
+  --color-overlay-border: rgba(0, 0, 0, 0.12);
+  --color-overlay-divider: #cbd5e1;
+  --color-overlay-row-divider: #e2e8f0;
+  --color-debug-fg: #14532d;
+  --color-debug-fg-ink: #ffffff;
+  --color-debug-input-bg: #f1f5f9;
+  --color-debug-text: #1e293b;
+  --color-stat-good: #15803d;
+  --color-stat-warn: #b45309;
+  --color-stat-bad: #b91c1c;
+}
+
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
@@ -6,8 +120,8 @@
 
 body {
   font-family: system-ui, -apple-system, sans-serif;
-  background: #1a1a2e;
-  color: #eee;
+  background: var(--color-body-bg);
+  color: var(--color-body-text);
   height: 100vh;
 }
 

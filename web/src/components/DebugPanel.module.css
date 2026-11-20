@@ -9,9 +9,9 @@
 
 .toggle {
   display: block;
-  background: rgba(0, 0, 0, 0.75);
-  color: #0f0;
-  border: 1px solid #0f0;
+  background: var(--color-overlay);
+  color: var(--color-debug-fg);
+  border: 1px solid var(--color-debug-fg);
   padding: 4px 10px;
   cursor: pointer;
   border-radius: 4px 0 0 0;
@@ -19,16 +19,16 @@
 
 .badge {
   margin-left: 6px;
-  background: #0f0;
-  color: #000;
+  background: var(--color-debug-fg);
+  color: var(--color-debug-fg-ink);
   border-radius: 8px;
   padding: 0 5px;
   font-size: 10px;
 }
 
 .panel {
-  background: rgba(0, 0, 0, 0.92);
-  border: 1px solid #0f0;
+  background: var(--color-overlay-strong);
+  border: 1px solid var(--color-debug-fg);
   border-bottom: none;
   border-right: none;
   width: 520px;
@@ -40,15 +40,15 @@
   justify-content: space-between;
   align-items: center;
   padding: 4px 8px;
-  border-bottom: 1px solid #333;
+  border-bottom: 1px solid var(--color-overlay-divider);
 }
 
-.count { color: #888; }
+.count { color: var(--color-overlay-muted); }
 
 .copyBtn {
-  background: #1a1a1a;
-  color: #0f0;
-  border: 1px solid #0f0;
+  background: var(--color-debug-input-bg);
+  color: var(--color-debug-fg);
+  border: 1px solid var(--color-debug-fg);
   padding: 2px 8px;
   cursor: pointer;
   border-radius: 3px;
@@ -61,10 +61,10 @@
 }
 
 .line {
-  color: #ccc;
+  color: var(--color-debug-text);
   white-space: pre-wrap;
   word-break: break-all;
   line-height: 1.5;
-  border-bottom: 1px solid #111;
+  border-bottom: 1px solid var(--color-overlay-row-divider);
   padding: 1px 0;
 }
