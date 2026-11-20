@@ -2,8 +2,8 @@
   position: fixed;
   top: 52px; /* below toolbar */
   right: 12px;
-  background: rgba(0, 0, 0, 0.72);
-  color: #e0e0e0;
+  background: var(--color-overlay-soft);
+  color: var(--color-overlay-text);
   font-family: 'Courier New', monospace;
   font-size: 11px;
   border-radius: 6px;
@@ -12,7 +12,7 @@
   pointer-events: none;
   min-width: 140px;
   backdrop-filter: blur(4px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--color-overlay-border);
 }
 
 .row {
@@ -23,7 +23,7 @@
 }
 
 .label {
-  color: #888;
+  color: var(--color-overlay-muted);
 }
 
 .value {
@@ -31,6 +31,6 @@
   text-align: right;
 }
 
-.good  { color: #4caf50; }
-.warn  { color: #ff9800; }
-.bad   { color: #f44336; }
+.good  { color: var(--color-stat-good); }
+.warn  { color: var(--color-stat-warn); }
+.bad   { color: var(--color-stat-bad); }

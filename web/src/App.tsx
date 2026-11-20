@@ -4,6 +4,8 @@ import { ConnectForm } from './components/ConnectForm';
 import { RemoteScreen } from './components/RemoteScreen';
 import { DebugPanel } from './components/DebugPanel';
 import { StatsOverlay } from './components/StatsOverlay';
+import { ThemeSelect } from './components/ThemeSelect';
+import { useTheme } from './utils/theme';
 import { commitPasswordAfterConnect, discardPasswordAttempt } from './utils/passwordStorage';
 import styles from './App.module.css';
 
@@ -21,6 +23,7 @@ function App() {
   });
 
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const theme = useTheme();
 
   useEffect(() => {
     const onChange = () => setIsFullscreen(!!document.fullscreenElement);
@@ -78,6 +81,11 @@ function App() {
               >
                 <span aria-hidden="true">⛶ Fullscreen</span>
               </button>
+              <ThemeSelect
+                className={styles.themeSelect}
+                value={theme.preference}
+                onChange={theme.setPreference}
+              />
               <button className={styles.disconnectBtn} onClick={controls.disconnect}>
                 Disconnect
               </button>
@@ -96,6 +104,8 @@ function App() {
           error={state.error}
           showDebug={showDebug}
           onShowDebugChange={setShowDebug}
+          theme={theme.preference}
+          onThemeChange={theme.setPreference}
         />
       )}
       {showDebug && !isFullscreen && <DebugPanel logs={state.logs} />}

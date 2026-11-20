@@ -6,7 +6,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #000;
+  background: var(--color-canvas);
   outline: none;
   overflow: hidden;
 }
@@ -22,7 +22,7 @@
 /* Native 1:1 mode: no scaling, scrollbars handled by parent */
 .containerNative {
   display: inline-block;
-  background: #000;
+  background: var(--color-canvas);
   outline: none;
   line-height: 0;
 }
