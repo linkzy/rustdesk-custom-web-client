@@ -36,6 +36,33 @@ describe('theme preference storage', () => {
     localStorage.setItem(THEME_STORAGE_KEY, 'sepia');
     expect(readThemePreference()).toBe('system');
   });
+
+  // main.tsx reads the preference before the first paint, so a storage that
+  // throws must degrade to the default rather than blank the page.
+  it('falls back to system when getItem throws', () => {
+    const throwing = {
+      getItem(): string | null {
+        throw new DOMException('The operation is insecure.', 'SecurityError');
+      },
+    };
+    expect(readThemePreference(throwing)).toBe('system');
+  });
+
+  it('falls back to system when even accessing localStorage throws', () => {
+    const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+    Object.defineProperty(globalThis, 'localStorage', {
+      configurable: true,
+      get() {
+        throw new DOMException('Access is denied for this document.', 'SecurityError');
+      },
+    });
+    try {
+      expect(readThemePreference()).toBe('system');
+    } finally {
+      if (descriptor) Object.defineProperty(globalThis, 'localStorage', descriptor);
+      else delete (globalThis as { localStorage?: unknown }).localStorage;
+    }
+  });
 });
 
 describe('resolveTheme', () => {

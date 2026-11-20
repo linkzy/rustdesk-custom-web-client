@@ -7,9 +7,23 @@ export const THEME_STORAGE_KEY = 'rclient_theme';
 const PREFERENCES: readonly ThemePreference[] = ['light', 'dark', 'system'];
 const DARK_QUERY = '(prefers-color-scheme: dark)';
 
-/** Stored preference; anything unknown or missing means `system`. */
-export function readThemePreference(storage: Pick<Storage, 'getItem'> = localStorage): ThemePreference {
-  const raw = storage.getItem(THEME_STORAGE_KEY);
+/**
+ * Stored preference; anything unknown or missing means `system`.
+ *
+ * The read is wrapped because main.tsx calls this before the first paint: a
+ * browser that blocks storage (a sandboxed iframe, or one that disables
+ * localStorage) throws on the `localStorage` access itself, not only on
+ * `getItem`. An uncaught throw there is a blank page instead of the connect
+ * form, so the default `localStorage` is resolved inside the try as well.
+ * Falling back to `system` also matches the CSS default (dark palette).
+ */
+export function readThemePreference(storage?: Pick<Storage, 'getItem'>): ThemePreference {
+  let raw: string | null;
+  try {
+    raw = (storage ?? localStorage).getItem(THEME_STORAGE_KEY);
+  } catch {
+    return 'system';
+  }
   return (PREFERENCES as readonly string[]).includes(raw ?? '') ? (raw as ThemePreference) : 'system';
 }
 
