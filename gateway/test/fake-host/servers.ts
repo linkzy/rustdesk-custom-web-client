@@ -88,6 +88,16 @@ export class FakeServers {
     await Promise.all([this.startHbbs(), this.startHbbr()]);
   }
 
+  /** Port hbbs actually bound (resolved when configured as 0). */
+  hbbsPort(): number {
+    return boundPort(this.hbbsServer, this.opts.hbbsPort);
+  }
+
+  /** Port hbbr actually bound (resolved when configured as 0). */
+  hbbrPort(): number {
+    return boundPort(this.hbbrServer, this.opts.hbbrPort);
+  }
+
   private async startHbbs(): Promise<void> {
     const server = http.createServer((_req, res) => {
       res.writeHead(404);
@@ -119,7 +129,7 @@ export class FakeServers {
             }
 
             const uuid = `fake-session-${++this.sessionCounter}`;
-            const relayServer = `127.0.0.1:${this.opts.hbbrPort}`;
+            const relayServer = `127.0.0.1:${this.hbbrPort()}`;
             ws.send(this.encode({
               relay_response: {
                 uuid,
@@ -215,12 +225,12 @@ export class FakeServers {
     });
 
     await listen(server, this.opts.hbbrPort);
-    this.opts.log(`[hbbr] listening on ws://127.0.0.1:${this.opts.hbbrPort}`);
+    this.opts.log(`[hbbr] listening on ws://127.0.0.1:${this.hbbrPort()}`);
   }
 
   /** Opens the peer side of the relay connection for an allocated UUID. */
   connectPeer(uuid: string): Promise<WebSocket> {
-    const url = `ws://127.0.0.1:${this.opts.hbbrPort}`;
+    const url = `ws://127.0.0.1:${this.hbbrPort()}`;
     const ws = new WebSocket(url);
     this.peerClients.set(uuid, ws);
     return new Promise((resolve, reject) => {
@@ -234,7 +244,7 @@ export class FakeServers {
           request_relay: {
             id: this.opts.id,
             uuid,
-            relay_server: `127.0.0.1:${this.opts.hbbrPort}`,
+            relay_server: `127.0.0.1:${this.hbbrPort()}`,
             secure: false,
             conn_type: 0,
             token: PEER_TOKEN,
@@ -310,4 +320,11 @@ function listen(server: http.Server, port: number): Promise<void> {
       resolve();
     });
   });
+}
+
+/** The port a server actually bound; falls back to the configured one. */
+function boundPort(server: http.Server | null, fallback: number): number {
+  const address = server?.address();
+  if (address && typeof address === 'object') return address.port;
+  return fallback;
 }
