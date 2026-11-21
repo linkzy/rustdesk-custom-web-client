@@ -21,12 +21,14 @@ The RustDesk relay itself is **not** in this repo.
 ## Commands
 
 ```bash
-# from the repo root (no dependencies at the root; it forwards to both packages)
+# from the repo root (its only dependency is @playwright/test, for the e2e suite)
 npm run install:all   # npm ci in gateway/ then web/
 npm test              # vitest in both (currently 50 gateway + 97 web)
 npm run typecheck     # tsc in both
 npm run lint          # eslint in both
 npm run build         # both
+npm run test:e2e      # Playwright against the fake host (needs: npx playwright install chromium)
+npm run record:demo   # re-record the README GIF (CDP, not Playwright)
 
 # gateway alone
 cd gateway && npm ci
