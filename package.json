@@ -14,6 +14,7 @@
     "typecheck": "npm --prefix gateway run typecheck && npm --prefix web run typecheck",
     "lint": "npm --prefix gateway run lint && npm --prefix web run lint",
     "build": "npm --prefix gateway run build && npm --prefix web run build",
-    "test:e2e": "node e2e/run.mjs"
+    "test:e2e": "node e2e/run.mjs",
+    "record:demo": "node e2e/record-demo.mjs"
   }
 }
