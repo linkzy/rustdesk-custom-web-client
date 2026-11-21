@@ -9,13 +9,15 @@ npm run build
 cp -r src/proto dist/proto          # tsc does not copy .proto; the Dockerfile does
 node test/fake-host/compare-bytes.cjs /tmp/proto-$(node -p "require('protobufjs/package.json').version").json
 node test/fake-host/cross-decode.cjs /tmp/decode-$(node -p "require('protobufjs/package.json').version").json
+node test/fake-host/probe-oneof.cjs  # oneof presence + the field-name trap, exits non-zero on a problem
+node test/fake-host/probe-repeated.cjs
 ```
 
 Then:
 
 ```bash
-node /path/to/diff-bytes.cjs  /tmp/proto-7.x.json /tmp/proto-8.x.json
-node /path/to/diff-decode.cjs /tmp/decode-7.x.json /tmp/decode-8.x.json
+node test/fake-host/diff-bytes.cjs  /tmp/proto-7.x.json /tmp/proto-8.x.json
+node test/fake-host/diff-decode.cjs /tmp/decode-7.x.json /tmp/decode-8.x.json
 ```
 
 `compare-bytes.cjs` encodes a representative message set with the gateway's own
@@ -52,6 +54,40 @@ explicit presence — dropping one would change the array length rather than its
 values. It does not: both versions decode the repeated `frames` to 3 elements
 with the same payloads. 7.x additionally writes `0a001000` (empty `data` and
 `key = false`) inside elements; 8.x omits those.
+
+### Fourth check: oneof presence
+
+Oneof members also have explicit presence, and unlike a plain scalar proto3 must
+write them even when they hold the default — the value *is* the union's content.
+Dropping `unicode: 0` would turn "the user pressed the key with code point 0"
+into "no union member set", which is a real behaviour change, not a shorter
+encoding. `probe-oneof.cjs` checks each oneof member of `KeyEvent` at its default
+value, on 8.8.1:
+
+| member | encoded hex | decodes as |
+|---|---|---|
+| `unicode = 0` | `7a0408012800` | `unicode: 0` — union member present |
+| `control_key = 0` | `7a0408011800` | `control_key: Unknown` — present |
+| `chr = 0` | `7a0408012000` | `chr: 0` — present |
+| `seq = ""` | `7a0408013200` | `seq: ""` — present |
+| plain `mode = 0` (not a oneof) | `7a0408012861` | `unicode: 97` — `mode` omitted, as expected |
+
+All four survive; 8.x preserves oneof presence correctly. `mouse_event` with
+`mask = 0` likewise keeps the field (`5204100a180c`), because `mask` is a plain
+scalar inside a message the gateway always fills in. 7.x produces the same
+messages two bytes longer, because it *also* writes the non-oneof `mode = 0`.
+
+**The field-name trap, so this is not re-run wrong:** protobufjs accepts the
+`.proto` spelling or camelCase depending on how the `Root` was loaded. This
+gateway's `loadProtos` uses `keepCase: true`, so the fields are `control_key`,
+`win2win_hotkey` and so on. protobufjs's *default* is camelCase, and unknown keys
+are **silently dropped** rather than rejected — so a check written with
+`controlKey` against this Root encodes nothing, produces a shorter hex
+(`7a020801` instead of `7a0408011800`), and decodes with no union member set. It
+looks like a pass if you only compare "did it not throw". `probe-oneof.cjs`
+resolves the real field names from the loaded type first and asserts the wrong
+spelling produces *no* union member, so the trap is demonstrated rather than
+trusted.
 
 ## Session evidence
 
