@@ -240,7 +240,9 @@ never overwrite the real hero or add a second GIF.
 - **Synthetic by design**, and a badge in every frame says so. It is a test
   pattern, not a desktop; if you ever use it as a hero, say so in the caption.
 - **Needs** Chrome or Edge (set `E2E_CHROME_PATH` if it is not in a standard
-  location) and `ffmpeg` on `PATH`. Both are also what the end-to-end suite uses.
+  location) and `ffmpeg` on `PATH`. The end-to-end suite is separate: it uses
+  Playwright's own Chromium (`npx playwright install chromium`) and does not
+  launch a system browser, so the recorder and the suite share no browser setup.
 - Keep the real hero under ~2 MB; it is 270 KB today.
 
 ---
