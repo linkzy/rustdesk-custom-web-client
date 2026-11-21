@@ -8,12 +8,13 @@ export default defineConfig({
     // need more than the 5s default.
     testTimeout: 30000,
     hookTimeout: 30000,
-    // One file at a time in a single fork. The defaults would start one worker
-    // per CPU (this machine has 4 threads) and the integration files bind real
-    // ports and stream video, which is exactly the kind of parallel load that
-    // makes the whole machine unusable. The suite is ~2s either way.
+    // One file at a time. The defaults would start one worker per CPU (this
+    // machine has 4 threads) and the integration files bind real ports and
+    // stream video, which is exactly the kind of parallel load that makes the
+    // whole machine unusable. The suite is ~5s either way. `fileParallelism:
+    // false` already forces a single worker; `maxWorkers` states it explicitly.
     pool: 'forks',
-    poolOptions: { forks: { singleFork: true } },
     fileParallelism: false,
+    maxWorkers: 1,
   },
 });

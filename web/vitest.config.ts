@@ -9,9 +9,11 @@ export default defineConfig({
     environment: 'jsdom',
     include: ['src/**/*.test.{ts,tsx}'],
     // jsdom is memory-hungry and this is a 4-thread machine: one file at a time
-    // in a single fork keeps a test run from competing with everything else.
+    // keeps a test run from competing with everything else. `fileParallelism:
+    // false` already forces a single worker; `maxWorkers` states it explicitly
+    // because the default is one worker per CPU.
     pool: 'forks',
-    poolOptions: { forks: { singleFork: true } },
     fileParallelism: false,
+    maxWorkers: 1,
   },
 });
