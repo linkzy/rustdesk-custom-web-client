@@ -11,6 +11,14 @@ control a machine from a browser on a computer where you cannot install anything
 [![good first issues](https://img.shields.io/github/issues/linkzy/rustdesk-custom-web-client/good%20first%20issue?label=good%20first%20issues)](https://github.com/linkzy/rustdesk-custom-web-client/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)
 [![version](https://img.shields.io/github/v/release/linkzy/rustdesk-custom-web-client?label=version)](https://github.com/linkzy/rustdesk-custom-web-client/releases)
 
+<img src="./docs/assets/demo.gif" alt="rclient in a browser: filling the Device ID and password, connecting, then the remote screen with the session toolbar and a note that 25 key events reached the host. A synthetic session against the project's fake RustDesk host, not a real desktop." width="880">
+
+<sub>**This recording is a synthetic session**, made against the project's fake
+RustDesk host (the animated test pattern), so anyone can regenerate it — the steps
+are in [`docs/DEVELOPMENT.md`](./docs/DEVELOPMENT.md#regenerating-the-readme-demo).
+A real, verified session against a real desktop looks like
+[this screenshot](./docs/assets/demo-session.png) (see the demo note below).</sub>
+
 > **Try it: [rclient-demo.linkzy.dev](https://rclient-demo.linkzy.dev)**
 >
 > The demo runs its own relay, so point your RustDesk at it first — only the

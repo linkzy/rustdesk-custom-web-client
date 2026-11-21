@@ -7,7 +7,7 @@
 // several spellings ("Wrong password" / "Wrong Password", "Peer not available:
 // OFFLINE", "connect error: …"), so a substring match against what we have seen.
 
-import type { MessageKey } from '../i18n/en';
+import type { MessageKey } from '../i18n/types';
 
 export interface FriendlyError {
   title: MessageKey;

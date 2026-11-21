@@ -207,6 +207,36 @@ WEB_PORT=8080 docker compose -f docker-compose.yml up -d --build
 
 ---
 
+## Regenerating the README demo
+
+The GIF at the top of the README is recorded, not hand-made. One command, from the
+repository root:
+
+```bash
+node e2e/record-demo.mjs
+```
+
+It starts the fake RustDesk host, the gateway and the Vite dev server on ephemeral
+ports (`e2e/stack.mjs`), drives Chrome over the DevTools protocol through the whole
+flow — connect form, typing the ID and password, connecting, the session, a mouse
+move, a short typing burst — captures every painted frame with
+`Page.startScreencast`, and encodes them to `docs/assets/demo.gif` plus a poster
+still, `docs/assets/demo.png`.
+
+- **Deterministic in substance, not frame-for-frame.** The picture comes from the
+  fake host's own clip and the interaction is scripted, so every run shows the same
+  steps and the same "25 key events received" figure; the frame count varies by a
+  few because the capture follows real paints (≈10 s, 150–165 frames).
+- **Synthetic by design**, and the clip says so on screen. It is a test pattern,
+  not a desktop; do not present it otherwise. `docs/assets/demo-session.png` is the
+  real, verified session, and the README links both.
+- **Needs** Chrome or Edge (set `E2E_CHROME_PATH` if it is not in a standard
+  location) and `ffmpeg` on `PATH`. Both are also what the end-to-end suite uses.
+- `--out <path-without-extension>` writes somewhere else, e.g.
+  `--out /tmp/demo` for a throwaway copy.
+- Keep the GIF under ~5 MB. It is ~0.2 MB today at 960×600, 15 fps, ~10 s.
+---
+
 ## 6. Branches and commits
 
 - **`main`** is the only long-lived branch. Work happens on short-lived branches

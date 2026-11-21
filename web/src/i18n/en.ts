@@ -92,5 +92,7 @@ export const en = {
     'The Debug Panel has the technical details. Check the machine ID, password and relay settings.',
 } as const;
 
-export type MessageKey = keyof typeof en;
-export type Catalogue = Record<MessageKey, string>;
+/** The language's own name, for the picker — never translated. */
+export const label = 'English';
+
+/** No types here on purpose: a translator copies this file verbatim. See types.ts. */

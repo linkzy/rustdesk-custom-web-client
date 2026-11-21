@@ -273,11 +273,11 @@
         }
       ],
       "imposedBy": "HMN",
-      "confirmation": "found",
+      "confirmation": "checked-by-agent",
       "status": "done",
-      "current": "Met: gateway/package.json still pins protobufjs ^7.4.0 with 8.8.1 deliberately not merged (#28 open).",
-      "check": "gateway/package.json protobufjs major is 7; #28 unmerged until T23 unblocks.",
-      "updatedAt": 1795129997012,
+      "current": "Met: protobufjs is ^8.8.1 on main (commit 55e2d13). Verified before merging: 50/50 gateway tests, a full fake-host session, 5/5 e2e, 19 message cases encoding identically apart from proto3 default omission and decoding to the same object, and oneof presence preserved (probe-oneof.cjs). #28 closed pointing at the merge; #37 closed.",
+      "check": "cd gateway && npm run build && cp -r src/proto dist/proto; node test/fake-host/compare-bytes.cjs and cross-decode.cjs on each version, then diff-bytes.cjs/diff-decode.cjs over the two JSONs; node test/fake-host/protocol-run.mjs against a gateway on the version under test; npm run test:e2e",
+      "updatedAt": 1795285767315,
       "updatedBy": "core"
     },
     {

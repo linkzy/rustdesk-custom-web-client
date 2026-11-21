@@ -19,6 +19,7 @@ each kind of reader to the right document — then pick something from
 | **Propose a feature** | Open a [feature request](https://github.com/linkzy/rustdesk-custom-web-client/issues/new?template=feature_request.yml) — or float the idea in [Discussions → Ideas](https://github.com/linkzy/rustdesk-custom-web-client/discussions) first if it is still rough. Say what problem it solves for you. |
 | **Send a fix** | Find an open issue (start with [`good first issue`](https://github.com/linkzy/rustdesk-custom-web-client/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)), comment to claim it, then open a pull request. That avoids two people writing the same patch. |
 | **Improve the docs** | Same as a fix — docs are code here, and wrong docs are treated as bugs. |
+| **Translate the UI** | Copy `web/src/i18n/en.ts` to your language, translate the values, register it in three lines. Full walkthrough: [`docs/TRANSLATING.md`](./docs/TRANSLATING.md); claim it in [issue #38](https://github.com/linkzy/rustdesk-custom-web-client/issues/38). |
 | **Share a setup** | A relay/host combination that works well (or badly) is useful context — post it in Discussions. |
 
 Labels you will see: `bug`, `enhancement`, `documentation`, `question`,
