@@ -390,6 +390,34 @@ cd /home/demo && docker compose down
 `rclient-demo-*`, and never restart `cloudflared.service` — that is the owner's
 tunnel and it serves the rest of the host.
 
+## Temporary exposure: files are not gone when you delete them
+
+If you ever need to put a file on the demo briefly (a recording, a log, a
+screenshot for someone to fetch), know that **removal is not instant and not
+one place**:
+
+- Files copied into the `web` container's docroot are plain static assets, and
+  **Cloudflare caches them for 4 hours** (`cache-control: max-age=14400` comes
+  from the edge, not from our nginx config). Delete the file and the origin is
+  clean immediately, but the **public URL keeps returning the old bytes** until
+  that cache expires. There is no purge scope on the demo's Cloudflare token, so
+  it cannot be shortened.
+- The docroot has no volume, so the files live in the container's writable
+  layer: a plain `restart` **keeps** them, a `compose up -d` recreate
+  **discards** them. Neither is a cleanup mechanism.
+- Deleting needs the running container (`docker exec … rm`), and the cleanup
+  must **verify the origin directly** (`curl http://127.0.0.1:8090/<file>`), not
+  the public URL — the public one can be answered by a cache, so it proves
+  nothing about the host.
+- Also do not trust an HTTP status as the check: nginx's `try_files … /index.html`
+  returns **200 with the SPA HTML** for a missing asset, never 404. Compare the
+  served byte size against `index.html`'s, or check the file's absence in the
+  container.
+
+Prefer a path that is not cached (or a response header that bypasses the cache)
+over the static docroot for anything temporary, and remove it with a timer that
+checks the origin rather than one that depends on someone remembering.
+
 ## Stability settings (R-16 / R-19)
 
 Applied to both demo containers so the demo cannot destabilise the host:
