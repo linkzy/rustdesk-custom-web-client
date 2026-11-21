@@ -223,6 +223,49 @@ test('my scenario', async ({ page, stack }) => {
 - Wait on real state rather than sleeping. `expect.poll` and
   `stack.control.waitForFrames` both do this.
 
+#### The `getByText` trap that catches everyone first
+
+`getByText('Wrong password', { exact: true })` finds **nothing**, even though the
+screen clearly says "Wrong password". The reason is in the markup: the error is a
+single `role="alert"` element containing two spans, and the title span carries an
+emoji prefix (`ConnectForm.tsx`):
+
+```html
+<div role="alert">
+  <span>❌ Wrong password</span>
+  <span>Check the password in RustDesk on the remote machine and try again.</span>
+</div>
+```
+
+Measured against the real page:
+
+| locator | matches |
+|---|---|
+| `getByText('Wrong password', { exact: true })` | **0** |
+| `getByText('Wrong password')` (substring) | 1 |
+| `getByText('❌ Wrong password', { exact: true })` | 1 |
+| `getByRole('alert')` | 1 |
+
+So: assert on the **role** and on a substring of the text, which is both stable
+and meaningful — the spec does
+
+```js
+const alert = page.getByRole('alert');
+await expect(alert).toContainText('Wrong password');
+await expect(alert).toContainText('Check the password in RustDesk');
+```
+
+Note that `exact: true` is not the enemy here — the emoji is. Reach for exact
+matching only when you own the whole string; for a message assembled from parts,
+a role plus `toContainText` says what you mean and survives a copy change.
+
+Two more that were found the hard way on this project:
+
+- **Do not assert the RustDesk mouse mask as 1.** A left button press arrives as
+  mask **9** (`(0x01 << 3) | 1`); 1 means something else. See `RemoteScreen.tsx`.
+- **The header uses U+00D7.** App.tsx renders `640×360`, not `640x360`; an ASCII
+  `x` in an assertion will never match.
+
 ### Reading a failing run
 
 A failure writes everything you need to `e2e/.artifacts/` (gitignored):
