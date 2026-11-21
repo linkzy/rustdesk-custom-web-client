@@ -12,10 +12,20 @@ import {
 import { en } from './en';
 
 describe('catalogues', () => {
-  it('every locale has exactly the English keys — no more, no fewer', () => {
+  it('a translation cannot be missing a key the English catalogue has', () => {
     const englishKeys = Object.keys(en).sort();
     for (const locale of AVAILABLE_LOCALES) {
-      expect(Object.keys(catalogueFor(locale)).sort(), locale).toEqual(englishKeys);
+      const keys = Object.keys(catalogueFor(locale)).sort();
+      // Set equality both ways: a missing key fails here, an invented one too.
+      expect(keys.filter((k) => !englishKeys.includes(k)), `${locale} must not invent keys`).toEqual([]);
+      expect(englishKeys.filter((k) => !keys.includes(k)), `${locale} must not miss keys`).toEqual([]);
+    }
+  });
+
+  it('a translation cannot invent a key English does not have', () => {
+    for (const locale of AVAILABLE_LOCALES) {
+      const extra = Object.keys(catalogueFor(locale)).filter((k) => !(k in en));
+      expect(extra, `${locale} has keys that are not in en.ts`).toEqual([]);
     }
   });
 
