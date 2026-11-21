@@ -1,19 +1,34 @@
 import { useCallback, useEffect, useState } from 'react';
-import { en, type Catalogue, type MessageKey } from './en';
-import { ptBR } from './pt-BR';
+import { en, label as enLabel } from './en';
+import type { Catalogue, MessageKey } from './types';
+import { ptBR, label as ptBRLabel } from './pt-BR';
 
 /**
- * A catalogue per locale, keyed by the BCP 47 tag `navigator.language` produces.
- * Adding a language is one import and one entry here — see docs/I18N.md.
+ * Every locale, in picker order. Each row is the whole registration: the BCP 47
+ * tag `navigator.language` produces, its catalogue, and the language's own name.
+ *
+ * Adding a language is this one entry plus the catalogue file. No component
+ * changes — that is the point of the shape (see docs/TRANSLATING.md).
  */
-const CATALOGUES: Record<string, Catalogue> = {
-  en,
-  'pt-BR': ptBR,
-};
+export const LOCALES = [
+  { tag: 'en', catalogue: en, label: enLabel },
+  { tag: 'pt-BR', catalogue: ptBR, label: ptBRLabel },
+] as const;
+
+const CATALOGUES: Record<string, Catalogue> = Object.fromEntries(
+  LOCALES.map((l) => [l.tag, l.catalogue]),
+);
+
+/** The locales this build ships, as a literal union ('en' | 'pt-BR'). */
+export type Locale = (typeof LOCALES)[number]['tag'];
 
 /** What the language picker offers, in display order. */
-export const AVAILABLE_LOCALES = ['en', 'pt-BR'] as const;
-export type Locale = (typeof AVAILABLE_LOCALES)[number];
+export const AVAILABLE_LOCALES: readonly Locale[] = LOCALES.map((l) => l.tag);
+
+/** The label to show for a locale in the picker. */
+export function localeLabel(tag: Locale): string {
+  return LOCALES.find((l) => l.tag === tag)?.label ?? tag;
+}
 
 export const LOCALE_STORAGE_KEY = 'rclient_locale';
 

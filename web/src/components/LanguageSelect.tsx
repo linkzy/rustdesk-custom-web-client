@@ -1,4 +1,4 @@
-import { AVAILABLE_LOCALES, type Locale, type TFunction } from '../i18n';
+import { AVAILABLE_LOCALES, localeLabel, type Locale, type TFunction } from '../i18n';
 
 interface LanguageSelectProps {
   value: Locale;
@@ -9,14 +9,9 @@ interface LanguageSelectProps {
 
 /**
  * Same shape as ThemeSelect: a plain <select> so it stays keyboard-reachable and
- * readable on every browser. Labels are endonyms — a visitor looking for their
- * own language recognises "Português (Brasil)" even when the UI is in English.
+ * readable on every browser. The labels come from each catalogue's own `label`
+ * export, so adding a language never touches this file.
  */
-const LABELS: Record<Locale, string> = {
-  en: 'English',
-  'pt-BR': 'Português (Brasil)',
-};
-
 export function LanguageSelect({ value, onChange, t, className }: LanguageSelectProps) {
   return (
     <select
@@ -28,7 +23,7 @@ export function LanguageSelect({ value, onChange, t, className }: LanguageSelect
     >
       {AVAILABLE_LOCALES.map((locale) => (
         <option key={locale} value={locale}>
-          {LABELS[locale]}
+          {localeLabel(locale)}
         </option>
       ))}
     </select>

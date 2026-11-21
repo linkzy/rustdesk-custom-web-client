@@ -1,8 +1,8 @@
 # Translating rclient
 
-Adding a language is meant to be a small pull request: one new catalogue file and
-three one-line registrations, no build tooling and no framework. This page is the
-whole process.
+Adding a language is a new catalogue file and **one line** of registration, with
+no build tooling, no framework and no component edits. This page is the whole
+process.
 
 If a step here does not match the code, that is a bug — open an issue.
 
@@ -49,21 +49,29 @@ If a step here does not match the code, that is a bug — open an issue.
    language tag: `pt-BR`, `de`, `fr`, `zh-Hans`. That same tag is what
    `navigator.language` produces, so no mapping table is needed.
 
+   In the copy, rename the export and its label:
+
+   ```ts
+   export const de = { … };        // was: export const en
+   export const label = 'Deutsch'; // the language's own name, shown in the picker
+   ```
+
+   Leave the types alone — `en.ts` has none on purpose, so the copy compiles as
+   plain data.
+
 2. **Translate the values, never the keys.** Keep placeholders exactly as they
    are — `{count}`, `{host}` and friends are substituted at runtime, and a
    renamed placeholder shows up as literal braces in the UI.
 
-3. **Register it.** Two lists in `web/src/i18n/index.ts`, and the picker's own
-   labels:
+3. **Register it** — one entry in `LOCALES`, in `web/src/i18n/index.ts`:
 
-   - `CATALOGUES` — `de: de,` so `t()` can find it.
-   - `AVAILABLE_LOCALES` — add `'de'`, which is what the picker offers.
-   - `LABELS` in `web/src/components/LanguageSelect.tsx` — the language's name *in
-     that language* (`de: 'Deutsch'`), so a visitor recognises it in a list that
-     may be in a language they do not read.
+   ```ts
+   { tag: 'de', catalogue: de, label: deLabel },
+   ```
 
-   Three edits, all one line each. No other component changes — if yours needs
-   one, the design got in the way; say so in the PR.
+   That single line is the whole integration: `t()` finds the catalogue, the
+   picker offers the tag, and the option shows the label you exported. No
+   component changes.
 
 4. **Check it.**
 
