@@ -148,8 +148,9 @@ lint → typecheck → test → build.
 |---|---|
 | `npm run lint` | Passes in both packages. |
 | `npm run typecheck` | Passes in both. |
-| `npm test` | Passes: 24 tests in `gateway/`, 25 in `web/`. |
+| `npm test` | Passes: 50 tests in `gateway/`, 97 in `web/`. |
 | `npm run build` | Passes in both packages. |
+| `npm run test:e2e` | Passes: 5 Playwright scenarios (needs the browser install below). |
 
 ### What the tests cover
 
@@ -158,24 +159,119 @@ lint → typecheck → test → build.
   round-trips and the key mapping (`gateway/src/utils/*.test.ts`).
 - **web/** (`vitest` + `jsdom`): frame parsing and codec strings, the
   `localStorage` keys and server-config normalisation, the Remember-password rules,
-  and the friendly-error mapping (`web/src/**/*.test.ts`).
+  the friendly-error mapping, and the i18n catalogues (`web/src/**/*.test.ts`).
+- **e2e/** (Playwright, real Chromium): a whole session against the fake RustDesk
+  host — video that keeps changing, a click arriving at the right coordinates,
+  typing arriving as unicode, and the two friendly error messages.
 
-None of them need a RustDesk host. What they cannot do is prove a real session
-works — see below.
+Unit tests are deliberately pure: they never launch a browser or open a socket
+that outlives the process.
 
-### What works without a RustDesk host
+---
 
-The gateway starts, `/config` answers and the browser UI loads with no relay at
-all. A **connect** needs a reachable RustDesk host on the configured relay: with
-none, `performRendezvous` retries an OFFLINE answer three times and then fails
-with `Peer not available: OFFLINE — make sure the RustDesk app is running and
-connected to your server`, which the UI shows as a connect error.
+## End-to-end tests (Playwright)
 
-So changes to the protocol layer (`session.ts`, `rendezvous.ts`, `relay.ts`,
-`keymap.ts`) can only be verified end to end against a host machine running
-RustDesk with a reachable relay. The unit tests pin the pure parts (hashing,
-framing, key mapping); the session itself still needs the real thing. A fake
-RustDesk host is the plan for closing that gap.
+The unit tests pin the pure parts. The end-to-end suite is what proves the
+product works: it starts a **fake RustDesk host**, a gateway and the built web
+app, then drives a real browser through a whole session.
+
+```bash
+npx playwright install chromium   # once; ~124 MB, not repeated per run
+npm run test:e2e
+```
+
+`npm run test:e2e` runs `playwright test --config e2e/playwright.config.mjs`.
+The config lives in `e2e/`, so the `--config` flag is required; running plain
+`npx playwright test` from the root would also walk `gateway/` and `web/` and try
+to run the vitest suites with the wrong runner. The config's `testMatch` is
+narrowed to `e2e/specs/*.spec.mjs` for the same reason.
+
+There is no relay and no real machine involved. `e2e/stack.mjs` starts everything
+on OS-assigned ports and `e2e/serve.mjs` serves `web/dist` while proxying `/ws`
+and `/config` to the gateway, so two runs never collide.
+
+### The five scenarios
+
+| Spec | What it proves |
+|---|---|
+| `specs/session.spec.mjs` | connects and streams video that keeps changing (canvas pixels sampled twice) |
+| | a click reaches the machine at the coordinates clicked (`/fake/events`, mask 9 = left down) |
+| | typing arrives as key events (unicode 97 and 98) |
+| `specs/failures.spec.mjs` | a wrong password shows the friendly message |
+| | an unknown ID says the machine is offline |
+
+### Writing a new test
+
+Add a `*.spec.mjs` under `e2e/specs/` and import from `./fixtures.mjs`:
+
+```js
+import { test, expect, connect } from './fixtures.mjs';
+
+test('my scenario', async ({ page, stack }) => {
+  await connect(page, { id: stack.fakeHost.id, password: stack.fakeHost.password });
+  // ...
+});
+```
+
+- The `stack` fixture is one stack per worker, torn down in a `finally` — do not
+  start your own servers.
+- Assert on things a user gets, not on internals. `stack.control` exposes the
+  fake host's own state: `waitForFrames(n)`, `events('mouse')`, `events('key')`,
+  `clearEvents()`, `state()`.
+- Select elements by **id** (`#rclient-device-id`) or role, not by translated
+  label text or CSS module class names: the labels change with the locale.
+- Wait on real state rather than sleeping. `expect.poll` and
+  `stack.control.waitForFrames` both do this.
+
+### Reading a failing run
+
+A failure writes everything you need to `e2e/.artifacts/` (gitignored):
+
+```
+e2e/.artifacts/
+  html-report/index.html          # open it in a browser: the whole run
+  test-results/<test-name>/       # one directory per failed test
+    trace.zip                     # the timeline
+    test-failed-1.png             # the page at the moment it broke
+    video.webm                    # the whole test, watchable
+    error-context.md              # the error plus an accessibility snapshot
+```
+
+To open a trace:
+
+```bash
+npx playwright show-trace e2e/.artifacts/test-results/<test-name>/trace.zip
+```
+
+A trace is not just a log: it holds a DOM snapshot per action, the network log,
+the console, the source line of each step, and a screencast. You can click any
+action and see the page as it was.
+
+The report server is never left running: the config uses `open: 'never'`, so
+`index.html` is written and the process exits.
+
+### In CI
+
+The `e2e` job in `.github/workflows/ci.yml` starts the fake host, the gateway and
+`e2e/serve.mjs` as background services with health checks, then runs Playwright
+with `E2E_EXTERNAL=1` so the fixture attaches to those services instead of
+starting its own. It installs Chromium only (`npx playwright install --with-deps
+chromium`) and uploads `e2e/.artifacts` and the service logs on failure.
+
+---
+
+## What works without a rustdesk host
+
+With `gateway/test/fake-host/` running, everything does: it stands in for a
+RustDesk host and its relay pair, so a session can be exercised without a real
+machine. `npm run fake-host` in `gateway/` starts it; see
+`gateway/test/fake-host/README.md`.
+
+Without it, the gateway still starts, `/config` answers and the UI loads, but a
+**connect** needs a reachable host: `performRendezvous` retries an OFFLINE answer
+three times and then fails with `Peer not available: OFFLINE — make sure the
+RustDesk app is running and connected to your server`, which the UI shows as the
+friendly "That machine is offline" message.
 
 ---
 
@@ -231,7 +327,14 @@ still, `docs/assets/demo.png`.
   not a desktop; do not present it otherwise. `docs/assets/demo-session.png` is the
   real, verified session, and the README links both.
 - **Needs** Chrome or Edge (set `E2E_CHROME_PATH` if it is not in a standard
-  location) and `ffmpeg` on `PATH`. Both are also what the end-to-end suite uses.
+  location) and `ffmpeg` on `PATH`.
+- **Stays on the DevTools protocol, not Playwright, on purpose.** The recorder
+  needs `Page.startScreencast` — a stream of the painted frames — and then
+  encodes them to a GIF. Playwright is built for assertions and traces, not for
+  capturing every paint as an image sequence, and its video recording is a
+  fixed-rate WebM that would have to be re-decoded anyway. The e2e *suite* is
+  Playwright; this one script is not, and that is deliberate rather than an
+  oversight. `npm run record:demo` runs it.
 - `--out <path-without-extension>` writes somewhere else, e.g.
   `--out /tmp/demo` for a throwaway copy.
 - Keep the GIF under ~5 MB. It is ~0.2 MB today at 960×600, 15 fps, ~10 s.

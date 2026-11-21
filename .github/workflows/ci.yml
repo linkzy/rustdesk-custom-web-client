@@ -166,20 +166,18 @@ jobs:
           cat /tmp/web.log
           exit 1
 
-      # The browser-driven suite: e2e/run.mjs, which needs no packages of its own
-      # (it borrows ws from gateway/). The browser is the only thing to install;
-      # Ubuntu runners ship Chrome, and installing chromium via Playwright would
-      # need Playwright itself, so fall back to apt.
-      - name: Install a headless browser
+      # Playwright drives the browser and owns its install. Chromium only: the
+      # product needs WebCodecs video decoding, and there is no reason to carry
+      # Firefox and WebKit on a CI runner. `--with-deps` installs the system
+      # libraries headless Chromium needs on a bare Ubuntu image.
+      #
+      # The root package.json has exactly one dependency (@playwright/test), so
+      # this root `npm ci` installs nothing but the test runner. gateway/ and
+      # web/ were installed separately above and are not npm workspaces.
+      - name: Install Playwright and Chromium
         run: |
-          if command -v google-chrome >/dev/null 2>&1 || command -v chromium >/dev/null 2>&1 \
-             || command -v chromium-browser >/dev/null 2>&1; then
-            echo "a chromium-class browser is already present"
-            exit 0
-          fi
-          sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends chromium-browser || \
-            sudo apt-get install -y --no-install-recommends chromium
+          npm ci --prefix . --ignore-scripts
+          npx playwright install --with-deps chromium
 
       - name: Run the end-to-end tests
         env:
@@ -189,7 +187,7 @@ jobs:
           E2E_CONTROL_URL: http://127.0.0.1:8081
           E2E_ID: '123456789'
           E2E_PASSWORD: demo
-        run: node e2e/run.mjs
+        run: npx playwright test --config e2e/playwright.config.mjs
 
       # On a failure the page state is what you need, so keep the trace,
       # screenshot and video instead of just the log.
