@@ -148,7 +148,7 @@ lint → typecheck → test → build.
 |---|---|
 | `npm run lint` | Passes in both packages. |
 | `npm run typecheck` | Passes in both. |
-| `npm test` | Passes: 50 tests in `gateway/`, 97 in `web/`. |
+| `npm test` | Passes: the full suite in both (currently 50 in `gateway/`, 97 in `web/`). |
 | `npm run build` | Passes in both packages. |
 | `npm run test:e2e` | Passes: 5 Playwright scenarios (needs the browser install below). |
 
@@ -315,7 +315,7 @@ The GIF at the top of the README is recorded, not hand-made. One command, from t
 repository root:
 
 ```bash
-node e2e/record-demo.mjs
+npm run record:demo        # same as: node e2e/record-demo.mjs
 ```
 
 It starts the fake RustDesk host, the gateway and the Vite dev server on ephemeral
