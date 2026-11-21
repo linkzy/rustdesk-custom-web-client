@@ -31,7 +31,10 @@ if (!exe) {
 }
 
 const profileDir = fs.mkdtempSync(path.join(os.tmpdir(), 'rclient-cdp-'));
-const port = 9333;
+// Port 0 lets the browser pick a free one; we read it back from DevToolsActivePort.
+// A fixed port would collide with (and silently attach to) a browser left over
+// from an earlier run, which is exactly how stray Chromium processes pile up.
+const port = 0;
 
 const chrome = spawn(exe, [
   '--headless=new',
@@ -47,10 +50,62 @@ const chrome = spawn(exe, [
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-async function findTarget() {
+// Declared before cleanup() so the teardown path can reach it even if the
+// script fails before the DevTools socket exists.
+let ws = null;
+
+// Always tear the browser down, however this script ends — an unhandled
+// rejection, an evaluate() that throws, or Ctrl-C. Leaving Chromium running
+// costs the machine more than this check is worth.
+let exited = false;
+function cleanup(code) {
+  if (exited) return;
+  exited = true;
+  // Ask the browser to close via its own DevTools command first: chrome.kill()
+  // only signals the launcher process, and a browser that ignores it keeps
+  // pinning the machine long after the check finished.
+  try {
+    if (ws && ws.readyState === 1) ws.send(JSON.stringify({ id: 9999, method: 'Browser.close' }));
+  } catch { /* ignore */ }
+  try { ws?.close(); } catch { /* ignore */ }
+  try { chrome.kill(); } catch { /* ignore */ }
+  setTimeout(() => {
+    try { fs.rmSync(profileDir, { recursive: true, force: true }); } catch { /* ignore */ }
+    process.exit(code);
+  }, 800);
+}
+
+process.on('uncaughtException', (e) => {
+  console.error('[browser] FAILED:', e.message);
+  cleanup(1);
+});
+process.on('unhandledRejection', (e) => {
+  console.error('[browser] FAILED:', e instanceof Error ? e.message : e);
+  cleanup(1);
+});
+process.on('SIGINT', () => cleanup(130));
+process.on('SIGTERM', () => cleanup(143));
+
+/** Reads the port the browser actually bound when we passed 0. */
+async function resolvePort() {
+  const file = path.join(profileDir, 'DevToolsActivePort');
   for (let i = 0; i < 100; i++) {
     try {
-      const res = await fetch(`http://127.0.0.1:${port}/json/list`);
+      // The file can appear before it is written: require both lines (port and
+      // websocket path) before trusting the number, or we read a truncated port.
+      const lines = fs.readFileSync(file, 'utf8').split('\n');
+      const value = Number(lines[0]);
+      if (lines.length >= 2 && value > 0) return value;
+    } catch { /* not written yet */ }
+    await sleep(200);
+  }
+  throw new Error('browser never wrote DevToolsActivePort');
+}
+
+async function findTarget(devtoolsPort) {
+  for (let i = 0; i < 100; i++) {
+    try {
+      const res = await fetch(`http://127.0.0.1:${devtoolsPort}/json/list`);
       const list = await res.json();
       const page = list.find((t) => t.type === 'page');
       if (page) return page;
@@ -60,8 +115,9 @@ async function findTarget() {
   throw new Error('Chrome DevTools endpoint never appeared');
 }
 
-const page = await findTarget();
-const ws = new WebSocket(page.webSocketDebuggerUrl, { perMessageDeflate: false });
+const devtoolsPort = await resolvePort();
+const page = await findTarget(devtoolsPort);
+ws = new WebSocket(page.webSocketDebuggerUrl, { perMessageDeflate: false });
 await new Promise((resolve, reject) => {
   ws.once('open', resolve);
   ws.once('error', reject);
@@ -162,7 +218,10 @@ for (let i = 0; i < 120; i++) {
 if (!painted?.canvas || painted.distinctColors <= 3) {
   console.error('[browser] FAILED: no painted video canvas', JSON.stringify(painted));
   console.error(logs.slice(-20).join('\n'));
+  // cleanup() exits the process, but make that explicit so nothing below runs
+  // in a future refactor.
   cleanup(1);
+  throw new Error('unreachable');
 }
 
 console.log(`[browser] canvas ${painted.width}x${painted.height}, ${painted.distinctColors} distinct sampled colours`);
@@ -173,12 +232,3 @@ fs.writeFileSync(out, Buffer.from(shot.data, 'base64'));
 console.log(`[browser] screenshot → ${out}`);
 console.log(`[browser] PASS`);
 cleanup(0);
-
-function cleanup(code) {
-  try { ws.close(); } catch { /* ignore */ }
-  chrome.kill();
-  setTimeout(() => {
-    try { fs.rmSync(profileDir, { recursive: true, force: true }); } catch { /* ignore */ }
-    process.exit(code);
-  }, 500);
-}
