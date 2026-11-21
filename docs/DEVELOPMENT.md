@@ -148,7 +148,7 @@ lint → typecheck → test → build.
 |---|---|
 | `npm run lint` | Passes in both packages. |
 | `npm run typecheck` | Passes in both. |
-| `npm test` | Passes: 24 tests in `gateway/`, 25 in `web/`. |
+| `npm test` | Passes: the full suite in both (currently 50 in `gateway/`, 97 in `web/`). |
 | `npm run build` | Passes in both packages. |
 
 ### What the tests cover

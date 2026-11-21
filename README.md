@@ -238,10 +238,13 @@ Nowhere, unless you opt in with "Remember password" — then in your browser's
 It did not work well with self-hosted relays; that is why this exists.
 
 **Is it tested?**
-Yes: 24 unit tests in the gateway and 25 in the web app, plus lint, typecheck and
-a production build, all run by [CI](https://github.com/linkzy/rustdesk-custom-web-client/actions/workflows/ci.yml)
-on every pull request. The tests pin the pure parts (hashing, framing, key
-mapping, storage rules); a real session still needs a RustDesk host.
+Yes. The full suite in both packages (currently 50 gateway tests and 97 web),
+plus lint, typecheck and a production build, runs on every pull request in
+[CI](https://github.com/linkzy/rustdesk-custom-web-client/actions/workflows/ci.yml),
+and there are end-to-end tests against the fake host. The unit tests pin the pure
+parts (hashing, framing, key mapping, storage, translation catalogues); a real
+session needs a RustDesk host, and that has been verified too — see
+[the demo note](#why-this-exists).
 
 **Can I use it on my phone?**
 Partly. Mouse and touch work; typing on the remote machine does not yet.
