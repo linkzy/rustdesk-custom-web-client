@@ -26,11 +26,12 @@ control a machine from a browser on a computer where you cannot install anything
 > separate relays. Anyone who already runs a RustDesk server can enter their own
 > under **Advanced options** instead.
 >
-> ⚠️ **The last mile is unproven.** The relay itself is verified at protocol
-> level (ports, key enforcement, relay pairing), but a real RustDesk host
-> producing video and input in the browser has not been run end to end yet. Treat
-> the demo as "should work, unproven". Details and evidence:
-> [`deploy/DEMO.md`](./deploy/DEMO.md).
+> ✅ **Verified end to end on 2026-11-21.** A real RustDesk host on the demo relay
+> was driven from this URL in a browser: login accepted, live video (H.264,
+> 1280×800, ~8 FPS, ~134 ms ping), and mouse and keyboard input from the browser
+> reaching the machine. Audio was not exercised (the test host had no sound
+> device). It is still a demo on one shared relay — see the limits and the
+> evidence in [`deploy/DEMO.md`](./deploy/DEMO.md).
 
 ---
 

@@ -11,19 +11,21 @@ RustDesk host app. No install on the controlling side, no account, no analytics
 added by the project.
 
 - Try it: <https://rclient-demo.linkzy.dev> — a separate demo instance with its own
-  relay. Before you connect, point your RustDesk host at that relay (see the status
-  below).
+  relay, verified end to end on 2026-11-21. Before you connect, point your RustDesk
+  host at that relay (see the status below).
 - Read: [`docs/README.md`](https://github.com/linkzy/rustdesk-custom-web-client/blob/main/docs/README.md)
   routes every kind of reader to the right page.
 - Deploy your own: the README's setup guide.
 
 **Honest status.** Video, input and audio work against a self-hosted relay, and
-that is still the path vouched for end to end. The public demo now runs its **own**
+that is still the path vouched for end to end. The public demo runs its **own**
 relay pair (hbbs+hbbr) on the DNS-only hostname `relay-demo.linkzy.dev`, because
-RustDesk's shared relay ports were refusing connections from its host. The relay is
-verified at protocol level — ports reachable, key enforced, peers pairing through
-hbbr — but a full session from a real RustDesk host to the browser is **not** proven
-yet, so treat the demo as "should work, unproven".
+RustDesk's shared relay ports were refusing connections from its host. On
+**2026-11-21** the demo was verified end to end: a real RustDesk host on that
+relay was driven from the demo URL in a browser — login accepted, live H.264
+video at 1280×800 and about 8 FPS with ~134 ms ping, and mouse and keyboard input
+from the browser reaching the machine. Audio was not exercised, because the
+headless host used for the test had no sound device.
 
 **To try the demo:** in RustDesk on the machine you want to control, set **ID
 Server** to `relay-demo.linkzy.dev` and paste the demo key shown on the demo page;
