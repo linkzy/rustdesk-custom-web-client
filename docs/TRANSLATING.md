@@ -1,7 +1,8 @@
 # Translating rclient
 
-Adding a language is meant to be a small pull request: one new file, one line of
-registration, no build tooling and no framework. This page is the whole process.
+Adding a language is meant to be a small pull request: one new catalogue file and
+three one-line registrations, no build tooling and no framework. This page is the
+whole process.
 
 If a step here does not match the code, that is a bug — open an issue.
 
@@ -24,8 +25,10 @@ If a step here does not match the code, that is a bug — open an issue.
 
 ### What is *not* translated
 
-- `web/index.html`'s `<title>` and description — they are for search engines and
-  link previews, which read the served HTML, not the running app.
+- `web/index.html`'s `<title>`, description and Open Graph tags — they are for
+  search engines and link previews, which read the served HTML before any
+  JavaScript runs. `web/public/manifest.webmanifest` is likewise static. Do not
+  "fix" these; they are English on purpose.
 - The Debug Panel's protocol log.
 - Error text that comes from the gateway or RustDesk itself. rclient maps the
   ones it recognises (`web/src/utils/errors.ts`) into translated sentences; the
@@ -39,7 +42,7 @@ If a step here does not match the code, that is a bug — open an issue.
 
    ```bash
    cd web/src/i18n
-   cp en.ts pt-BR.ts        # or: cp en.ts de.ts
+   cp en.ts de.ts        # name it after the language tag
    ```
 
    Name the file after the [BCP 47](https://www.rfc-editor.org/info/bcp47)
@@ -50,17 +53,31 @@ If a step here does not match the code, that is a bug — open an issue.
    are — `{count}`, `{host}` and friends are substituted at runtime, and a
    renamed placeholder shows up as literal braces in the UI.
 
-3. **Register it** in `web/src/i18n/index.ts`, next to the existing locales. One
-   entry is enough; the language picker reads that list.
+3. **Register it.** Two lists in `web/src/i18n/index.ts`, and the picker's own
+   labels:
+
+   - `CATALOGUES` — `de: de,` so `t()` can find it.
+   - `AVAILABLE_LOCALES` — add `'de'`, which is what the picker offers.
+   - `LABELS` in `web/src/components/LanguageSelect.tsx` — the language's name *in
+     that language* (`de: 'Deutsch'`), so a visitor recognises it in a list that
+     may be in a language they do not read.
+
+   Three edits, all one line each. No other component changes — if yours needs
+   one, the design got in the way; say so in the PR.
 
 4. **Check it.**
 
    ```bash
    cd web
-   npm test           # catalogue shape + key parity are unit-tested
-   npm run typecheck  # a missing or extra key is a type error
+   npm test           # key parity both ways, placeholders, fallback
+   npm run typecheck  # the catalogue type rejects a missing or extra key
    npm run dev        # then switch the language in the UI and click every screen
    ```
+
+   Three checks, all cheap: the test compares key lists in both directions and
+   asserts every `{placeholder}` survived; the catalogue is typed
+   `Record<MessageKey, string>`, so TypeScript rejects a catalogue that is missing
+   a key or invents one.
 
    The connect screen and the toolbar are the whole surface — you do not need a
    RustDesk host to translate rclient.
