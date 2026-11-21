@@ -58,6 +58,7 @@ function parseArgs(argv: string[]): CliOptions {
       case '--audio': opts.audio = true; break;
       case '--video': opts.video = next(); break;
       case '--quiet': opts.verbose = false; break;
+      case '--json': /* handled at ready time; accepted so arg parsing does not reject it */ break;
       case '--help':
       case '-h':
         printHelp();
@@ -118,12 +119,33 @@ async function main(): Promise<void> {
 
   const host = await startFakeHost(startOptions);
 
+  const ports = {
+    hbbs: host.hbbsPort(),
+    hbbr: host.hbbrPort(),
+    control: host.actualControlPort(),
+  };
+
+  if (process.env.FAKE_HOST_JSON === 'true' || process.argv.includes('--json')) {
+    // One machine-readable line a harness can parse; everything else stays on
+    // stderr-ish plain logs so a human can still read the output.
+    console.log(JSON.stringify({
+      ready: true,
+      id: host.options.id,
+      acceptAnyPassword: host.options.acceptAnyPassword,
+      hbbsPort: ports.hbbs,
+      hbbrPort: ports.hbbr,
+      controlPort: ports.control,
+      screen: { width: SCREEN.width, height: SCREEN.height, fps: SCREEN.fps },
+      audio: host.options.audio,
+    }));
+  }
+
   console.log('');
   console.log(`Fake host ready: id=${host.options.id} password=${host.options.acceptAnyPassword ? '(any)' : `"${host.options.password}"`}`);
-  console.log(`  hbbs  ws://127.0.0.1:${host.options.hbbsPort}`);
-  console.log(`  hbbr  ws://127.0.0.1:${host.options.hbbrPort}`);
-  console.log(`  state http://127.0.0.1:${host.options.controlPort}/fake/state`);
-  console.log(`  events http://127.0.0.1:${host.options.controlPort}/fake/events`);
+  console.log(`  hbbs  ws://127.0.0.1:${ports.hbbs}`);
+  console.log(`  hbbr  ws://127.0.0.1:${ports.hbbr}`);
+  console.log(`  state http://127.0.0.1:${ports.control}/fake/state`);
+  console.log(`  events http://127.0.0.1:${ports.control}/fake/events`);
   console.log(`  screen ${SCREEN.width}x${SCREEN.height} @ ${SCREEN.fps} fps VP9${host.options.audio ? ' + Opus' : ''}`);
   console.log('');
 

@@ -13,6 +13,9 @@
     "test:web": "npm --prefix web test",
     "typecheck": "npm --prefix gateway run typecheck && npm --prefix web run typecheck",
     "lint": "npm --prefix gateway run lint && npm --prefix web run lint",
-    "build": "npm --prefix gateway run build && npm --prefix web run build"
+    "build": "npm --prefix gateway run build && npm --prefix web run build",
+    "test:e2e": "node e2e/run.mjs",
+    "test:e2e:grep": "node e2e/run.mjs",
+    "test:e2e:playwright": "npx --prefix e2e playwright test --config e2e/playwright.config.mjs"
   }
 }

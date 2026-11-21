@@ -1,0 +1,6 @@
+# Output of an e2e run: screenshots, traces, videos, Playwright reports.
+# Kept on disk for debugging a failure, never committed.
+.artifacts/
+test-results/
+playwright-report/
+node_modules/
