@@ -18,7 +18,9 @@ import {
 } from '../utils/connectForm';
 import type { ServerConfig } from '../utils/connectForm';
 import { ThemeSelect } from './ThemeSelect';
+import { LanguageSelect } from './LanguageSelect';
 import type { ThemePreference } from '../utils/theme';
+import type { Locale, TFunction } from '../i18n';
 
 export type { ServerConfig };
 
@@ -47,9 +49,12 @@ interface ConnectFormProps {
   onShowDebugChange: (v: boolean) => void;
   theme: ThemePreference;
   onThemeChange: (t: ThemePreference) => void;
+  locale: Locale;
+  onLocaleChange: (l: Locale) => void;
+  t: TFunction;
 }
 
-export function ConnectForm({ onConnect, onDisconnect, status, error, showDebug, onShowDebugChange, theme, onThemeChange }: ConnectFormProps) {
+export function ConnectForm({ onConnect, onDisconnect, status, error, showDebug, onShowDebugChange, theme, onThemeChange, locale, onLocaleChange, t }: ConnectFormProps) {
   const [targetId, setTargetId]   = useState(() => localStorage.getItem(LS_ID_KEY)   ?? '');
   // The password is only read back from localStorage when the user opted in with
   // "Remember password"; the preference itself is remembered across visits.
@@ -151,23 +156,24 @@ export function ConnectForm({ onConnect, onDisconnect, status, error, showDebug,
   return (
     <div className={styles.container}>
       <div className={styles.themeRow}>
-        <ThemeSelect className={styles.themeSelect} value={theme} onChange={onThemeChange} />
+        <LanguageSelect className={styles.themeSelect} value={locale} onChange={onLocaleChange} t={t} />
+        <ThemeSelect className={styles.themeSelect} value={theme} onChange={onThemeChange} t={t} />
       </div>
       <div className={styles.logo}>
         <span className={styles.logoIcon}>🖥️</span>
         <h1 className={styles.title}>rclient</h1>
-        <p className={styles.subtitle}>RustDesk Web Client</p>
+        <p className={styles.subtitle}>{t('connect.subtitle')}</p>
       </div>
 
       {!isConnected ? (
-        <form className={styles.form} onSubmit={handleSubmit} aria-label="Connect to a RustDesk machine">
+        <form className={styles.form} onSubmit={handleSubmit} aria-label={t('connect.formLabel')}>
           <div className={styles.field}>
-            <label className={styles.label} htmlFor="rclient-device-id">Device ID</label>
+            <label className={styles.label} htmlFor="rclient-device-id">{t('connect.deviceId')}</label>
             <input
               id="rclient-device-id"
               className={styles.input}
               type="text"
-              placeholder="Enter RustDesk ID"
+              placeholder={t('connect.deviceIdPlaceholder')}
               value={targetId}
               onChange={(e) => { setTargetId(e.target.value); save(LS_ID_KEY, e.target.value); }}
               disabled={isConnecting}
@@ -177,21 +183,18 @@ export function ConnectForm({ onConnect, onDisconnect, status, error, showDebug,
             />
           </div>
           <div className={styles.field}>
-            <label className={styles.label} htmlFor="rclient-password">Password</label>
+            <label className={styles.label} htmlFor="rclient-password">{t('connect.password')}</label>
             <input
               id="rclient-password"
               className={styles.input}
               type="password"
-              placeholder="Connection password"
+              placeholder={t('connect.passwordPlaceholder')}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               disabled={isConnecting}
               autoComplete="off"
             />
-            <label
-              className={styles.checkboxLabel}
-              title="Saves the password in this browser's local storage. Leave it unticked on shared computers."
-            >
+            <label className={styles.checkboxLabel} title={t('connect.rememberPasswordHint')}>
               <input
                 type="checkbox"
                 className={styles.checkbox}
@@ -199,7 +202,7 @@ export function ConnectForm({ onConnect, onDisconnect, status, error, showDebug,
                 onChange={toggleRemember}
                 disabled={isConnecting}
               />
-              Remember password
+              {t('connect.rememberPassword')}
             </label>
           </div>
 
@@ -211,20 +214,18 @@ export function ConnectForm({ onConnect, onDisconnect, status, error, showDebug,
             aria-expanded={advOpen}
             aria-controls="rclient-advanced"
           >
-            <span aria-hidden="true">{advOpen ? '▾' : '▸'}</span> Advanced options
+            <span aria-hidden="true">{advOpen ? '▾' : '▸'}</span> {t('connect.advanced')}
           </button>
           {advOpen && (
             <div className={styles.advancedSection} id="rclient-advanced">
-              <p className={styles.advancedHint}>
-                Override the server defaults. Leave blank to use the gateway's built-in server.
-              </p>
+              <p className={styles.advancedHint}>{t('connect.advancedHint')}</p>
               <div className={styles.field}>
-                <label className={styles.label} htmlFor="rclient-hbbs">HBBS Host (rendezvous)</label>
+                <label className={styles.label} htmlFor="rclient-hbbs">{t('connect.hbbs')}</label>
                 <input
                   id="rclient-hbbs"
                   className={styles.input}
                   type="text"
-                  placeholder="e.g. myserver.com:21118"
+                  placeholder={t('connect.hbbsPlaceholder')}
                   value={hbbsHost}
                   onChange={(e) => { setHbbsHost(e.target.value); save(LS_HBBS_KEY, e.target.value); }}
                   disabled={isConnecting}
@@ -233,12 +234,12 @@ export function ConnectForm({ onConnect, onDisconnect, status, error, showDebug,
                 />
               </div>
               <div className={styles.field}>
-                <label className={styles.label} htmlFor="rclient-hbbr">HBBR Host (relay)</label>
+                <label className={styles.label} htmlFor="rclient-hbbr">{t('connect.hbbr')}</label>
                 <input
                   id="rclient-hbbr"
                   className={styles.input}
                   type="text"
-                  placeholder="e.g. myserver.com:21119"
+                  placeholder={t('connect.hbbrPlaceholder')}
                   value={hbbrHost}
                   onChange={(e) => { setHbbrHost(e.target.value); save(LS_HBBR_KEY, e.target.value); }}
                   disabled={isConnecting}
@@ -247,12 +248,12 @@ export function ConnectForm({ onConnect, onDisconnect, status, error, showDebug,
                 />
               </div>
               <div className={styles.field}>
-                <label className={styles.label} htmlFor="rclient-server-key">Server Key</label>
+                <label className={styles.label} htmlFor="rclient-server-key">{t('connect.serverKey')}</label>
                 <input
                   id="rclient-server-key"
                   className={styles.input}
                   type="text"
-                  placeholder="base64 public key"
+                  placeholder={t('connect.serverKeyPlaceholder')}
                   value={serverKey}
                   onChange={(e) => { setServerKey(e.target.value); save(LS_SRVKEY_KEY, e.target.value); }}
                   disabled={isConnecting}
@@ -265,7 +266,7 @@ export function ConnectForm({ onConnect, onDisconnect, status, error, showDebug,
                   checked={showDebug}
                   onChange={(e) => { onShowDebugChange(e.target.checked); save(LS_DEBUG_KEY, String(e.target.checked)); }}
                 />
-                Show debug info
+                {t('connect.showDebug')}
               </label>
             </div>
           )}
@@ -282,9 +283,9 @@ export function ConnectForm({ onConnect, onDisconnect, status, error, showDebug,
             aria-busy={isConnecting}
           >
             {isConnecting ? (
-              <><span className={styles.spinner} aria-hidden="true" /> Connecting…</>
+              <><span className={styles.spinner} aria-hidden="true" /> {t('connect.connecting')}</>
             ) : (
-              'Connect'
+              t('connect.connect')
             )}
           </button>
           {(status === 'error' || status === 'disconnected') && (
@@ -296,20 +297,22 @@ export function ConnectForm({ onConnect, onDisconnect, status, error, showDebug,
             >
               {status === 'error' ? (
                 <>
-                  <span className={styles.errorTitle}>❌ {friendly.title}</span>
-                  <span className={styles.errorHint}>{friendly.hint}</span>
+                  <span className={styles.errorTitle}>❌ {t(friendly.title)}</span>
+                  <span className={styles.errorHint}>{t(friendly.hint)}</span>
                 </>
               ) : (
-                '⚠️ Disconnected'
+                <>⚠️ {t('connect.disconnected')}</>
               )}
             </div>
           )}
         </form>
       ) : (
         <div className={styles.connectedPanel}>
-          <div className={styles.statusBadge} data-status="connected" role="status">✅ Connected</div>
+          <div className={styles.statusBadge} data-status="connected" role="status">
+            ✅ {t('connect.connected')}
+          </div>
           <button className={`${styles.button} ${styles.disconnectButton}`} onClick={onDisconnect}>
-            Disconnect
+            {t('toolbar.disconnect')}
           </button>
         </div>
       )}

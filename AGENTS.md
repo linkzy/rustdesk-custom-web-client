@@ -23,7 +23,7 @@ The RustDesk relay itself is **not** in this repo.
 ```bash
 # from the repo root (no dependencies at the root; it forwards to both packages)
 npm run install:all   # npm ci in gateway/ then web/
-npm test              # vitest in both: 24 gateway + 25 web
+npm test              # vitest in both: 45 gateway + 93 web
 npm run typecheck     # tsc in both
 npm run lint          # eslint in both
 npm run build         # both

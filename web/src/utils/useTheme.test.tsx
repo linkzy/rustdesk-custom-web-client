@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { createElement, act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { useTheme, THEME_STORAGE_KEY } from './theme';
+import { useI18n } from '../i18n';
 import { ThemeSelect } from '../components/ThemeSelect';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -34,10 +35,11 @@ let root: Root;
 // Renders the select plus a marker carrying the resolved theme, so tests read the DOM.
 function Probe() {
   const { preference, resolved, setPreference } = useTheme();
+  const { t } = useI18n();
   return createElement(
     'div',
     null,
-    createElement(ThemeSelect, { value: preference, onChange: setPreference }),
+    createElement(ThemeSelect, { value: preference, onChange: setPreference, t }),
     createElement('span', { 'data-testid': 'resolved' }, resolved),
   );
 }
