@@ -8,5 +8,10 @@ export default defineConfig({
     // frame/connect-form tests do not need a DOM.
     environment: 'jsdom',
     include: ['src/**/*.test.{ts,tsx}'],
+    // jsdom is memory-hungry and this is a 4-thread machine: one file at a time
+    // in a single fork keeps a test run from competing with everything else.
+    pool: 'forks',
+    poolOptions: { forks: { singleFork: true } },
+    fileParallelism: false,
   },
 });
