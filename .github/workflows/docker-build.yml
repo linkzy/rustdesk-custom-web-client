@@ -8,9 +8,19 @@ on:
     tags: ['v*']
   workflow_dispatch:
 
+# One image build at a time per ref: a superseded build would otherwise keep
+# running and publish tags nobody asked for. Two refs (main and a release tag)
+# still build in parallel.
+concurrency:
+  group: docker-build-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    # A stuck buildx step otherwise sits until GitHub's 6-hour job limit and is
+    # then reported as "cancelled" (run #68, 2026-11-20). Fail fast instead.
+    timeout-minutes: 45
     permissions:
       contents: read
       packages: write
