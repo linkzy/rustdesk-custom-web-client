@@ -223,6 +223,49 @@ test('my scenario', async ({ page, stack }) => {
 - Wait on real state rather than sleeping. `expect.poll` and
   `stack.control.waitForFrames` both do this.
 
+#### The `getByText` trap that catches everyone first
+
+`getByText('Wrong password', { exact: true })` finds **nothing**, even though the
+screen clearly says "Wrong password". The reason is in the markup: the error is a
+single `role="alert"` element containing two spans, and the title span carries an
+emoji prefix (`ConnectForm.tsx`):
+
+```html
+<div role="alert">
+  <span>❌ Wrong password</span>
+  <span>Check the password in RustDesk on the remote machine and try again.</span>
+</div>
+```
+
+Measured against the real page:
+
+| locator | matches |
+|---|---|
+| `getByText('Wrong password', { exact: true })` | **0** |
+| `getByText('Wrong password')` (substring) | 1 |
+| `getByText('❌ Wrong password', { exact: true })` | 1 |
+| `getByRole('alert')` | 1 |
+
+So: assert on the **role** and on a substring of the text, which is both stable
+and meaningful — the spec does
+
+```js
+const alert = page.getByRole('alert');
+await expect(alert).toContainText('Wrong password');
+await expect(alert).toContainText('Check the password in RustDesk');
+```
+
+Note that `exact: true` is not the enemy here — the emoji is. Reach for exact
+matching only when you own the whole string; for a message assembled from parts,
+a role plus `toContainText` says what you mean and survives a copy change.
+
+Two more that were found the hard way on this project:
+
+- **Do not assert the RustDesk mouse mask as 1.** A left button press arrives as
+  mask **9** (`(0x01 << 3) | 1`); 1 means something else. See `RemoteScreen.tsx`.
+- **The header uses U+00D7.** App.tsx renders `640×360`, not `640x360`; an ASCII
+  `x` in an assertion will never match.
+
 ### Reading a failing run
 
 A failure writes everything you need to `e2e/.artifacts/` (gitignored):
@@ -247,8 +290,14 @@ A trace is not just a log: it holds a DOM snapshot per action, the network log,
 the console, the source line of each step, and a screencast. You can click any
 action and see the page as it was.
 
-The report server is never left running: the config uses `open: 'never'`, so
-`index.html` is written and the process exits.
+> `show-trace` starts a local viewer server and **keeps running** until you press
+> Ctrl-C — it is not a command you run in a script or leave in the background. If
+> you would rather not have a server at all, drag `trace.zip` onto
+> <https://trace.playwright.dev>, or open `html-report/index.html`, which bundles
+> the same viewer and needs no server (it is a static file).
+
+The test run itself never leaves a server behind: the config uses
+`open: 'never'`, so the HTML report is written and the process exits.
 
 ### In CI
 
@@ -348,7 +397,8 @@ never overwrite the real hero or add a second GIF.
   oversight. `npm run record:demo` runs it.
 - `--out <path-without-extension>` writes somewhere else, e.g.
   `--out /tmp/demo` for a throwaway copy.
-- Keep the real hero under ~2 MB; it is 270 KB today.
+- Keep the real hero under ~2 MB; it is 270 KB today, and the synthetic clip is
+  ~0.2 MB at 960×600, 15 fps, ~10 s.
 
 ---
 
