@@ -14,7 +14,11 @@
     "typecheck": "npm --prefix gateway run typecheck && npm --prefix web run typecheck",
     "lint": "npm --prefix gateway run lint && npm --prefix web run lint",
     "build": "npm --prefix gateway run build && npm --prefix web run build",
-    "test:e2e": "node e2e/run.mjs",
+    "test:e2e": "playwright test --config e2e/playwright.config.mjs",
+    "test:e2e:ui": "playwright test --config e2e/playwright.config.mjs --ui",
     "record:demo": "node e2e/record-demo.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.65.1"
   }
 }
