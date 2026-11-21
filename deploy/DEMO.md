@@ -37,15 +37,28 @@ containers, its own tunnel and unit.
 
 ## What a visitor gets
 
-> **STATUS: the relay infrastructure is in place and was verified at protocol
-> level; a full RustDesk-to-browser session has NOT yet been run end to end.**
-> The demo now has its own RustDesk relay pair (`hbbs`+`hbbr`) on
-> `relay-demo.linkzy.dev` instead of RustDesk's shared servers. Ports, key
-> enforcement, UDP registration and relay pairing (bidirectional data through
-> `hbbr` between two different networks) are all verified. What is **not** yet
-> verified is the last mile: a real RustDesk host registered on this relay
-> producing video and input in the browser. Until someone does that, treat the
-> demo as "should work, unproven".
+> **STATUS: verified end to end on 2026-11-21.** A real RustDesk host registered
+> on the demo's own relay was driven from <https://rclient-demo.linkzy.dev> in a
+> real Chromium browser: login accepted, live video (H.264, 1280×800, ~8 FPS,
+> 134 ms ping), mouse and **keyboard input from the browser reached the host**.
+> Audio could **not** be tested (the headless host used for the test has no sound
+> device) — that is the one remaining unknown.
+
+Evidence, captured during that session:
+
+- Gateway log: `Starting rendezvous for peer: 374804137` →
+  `Rendezvous done. Relay: relay-demo.linkzy.dev, uuid: …` →
+  `Relay connected` → `Login successful` → `PeerInfo: 1280x800`, with
+  `GW FPS: 8 (frames=8)` reporting throughout.
+- hbbr log: `New relay request … from …` then `… got paired` for every session
+  — the relay itself carried the traffic.
+- Browser console: `[decoder] Initializing for codec: vp09.00.10.08` →
+  `[decoder] Decoder ready`.
+- Stats overlay during the session: **GW FPS 8**, **FPS 7.9–8.8**,
+  **Frame Δ 124 ms**, **Decode 0.9–1.5 ms**, **Ping 134–142 ms**, codec H.264.
+- Screenshot: [`docs/assets/demo-session.png`](../docs/assets/demo-session.png) —
+  the live session with the Stats overlay, and the words the tester typed from
+  the browser visible in the remote terminal.
 
 **Before you connect**, point your RustDesk at the demo's relay (only the
 machine you want to control needs this; the browser side is already configured):
@@ -77,10 +90,11 @@ The deployed stack is release 0.2.0 (web and gateway).
 
 ### Limits
 
-- **The demo relay is this one VPS.** At most `128 Mb/s` per session (hbbr's
-  default) and bounded by the host's bandwidth. It is shared by every visitor,
-  so heavy use is slow use. Expect noticeably lower frame rates than a dedicated
-  relay.
+- **One shared relay on one VPS.** hbbr caps a session at `128 Mb/s` (its
+  default) and everything competes for the host's bandwidth. Measured in the T26
+  test: **~8 FPS at 134 ms ping, 1280×800, H.264** — usable, not smooth, and that
+  was a nearly static screen. Expect worse with motion, real desktops and
+  several visitors at once.
 - **No guarantees.** The demo can be restarted, redeployed, rate-limited or taken
   down at any time. It is a demo, not a service. Don't depend on it.
 - **Visitors must configure their client first.** Unlike a public-relay demo,
@@ -89,6 +103,8 @@ The deployed stack is release 0.2.0 (web and gateway).
   are separate networks.
 - **The key is required.** hbbs rejects a punch-hole request with the wrong key
   (`LICENSE_MISMATCH`), which is verified behaviour, not a bug.
+- **Audio is unverified.** The test host had no sound device, so audio was never
+  exercised end to end.
 - **The demo no longer depends on RustDesk's public servers.** It used to; their
   relay ports (`21117`/`21119`) were refused from the VPS, my machine and 8
   external nodes while the ID ports stayed open, which is why this pair was
@@ -144,34 +160,69 @@ Every container, the network, the tunnel and the systemd unit are named
 
 Honest accounting — this is the part to trust over any status line.
 
-**Verified (2026-11-19, after deployment):**
+**Verified on 2026-11-21 — a real end-to-end session:**
 
 | Check | Result |
 | --- | --- |
+| **Real host on the demo relay** | An official RustDesk 1.5.3 host (`ID Server = relay-demo.linkzy.dev`, demo key) registered on our `hbbs`: log `update_pk 374804137 …` |
+| **Login accepted** | gateway: `Starting rendezvous for peer: 374804137` → `Rendezvous done. Relay: relay-demo.linkzy.dev, uuid: 06cc8a67-…` → `Relay connected` → `Sent LoginRequest` → `Login successful` → `PeerInfo: 1280x800` |
+| **Relay carried it** | hbbr: `New relay request 06cc8a67-… from <vps>:38991` then `… from <host>:48018 got paired` |
+| **Live video in a real browser** | Chromium (Playwright build) at <https://rclient-demo.linkzy.dev>: canvas 1280×800, console `[decoder] Initializing for codec: vp09.00.10.08` → `Decoder ready`; frame counter 333 frames in 45 s on a separate run |
+| **Video stats (Stats overlay)** | GW FPS **8**, FPS **7.9–8.8**, Frame Δ **124 ms**, Decode **0.9–1.5 ms**, Ping **134–142 ms**, codec **H.264** |
+| **Keyboard input from the browser** | Typed `INPUT-FROM-BROWSER` via CDP key events → the page's handlers emitted `[input] keydown key="I" …` → the text appeared **in the remote terminal**. Screenshot proof. |
+| **Mouse input** | `[input] mousedown btn=0 mask=9 x=794 y=160` / `mouseup … mask=10`, click landed in the remote window |
+| **Screenshot** | [`docs/assets/demo-session.png`](../docs/assets/demo-session.png) |
 | All four containers healthy | `docker compose ps` → gateway/web healthy, hbbs/hbbr up |
-| Relay ports from outside the VPS (my machine) | `21115`, `21116`, `21117`, `21118`, `21119` all reachable; UDP `21116` sends |
-| DNS shape | `relay-demo` resolves straight to the VPS IP (grey cloud, verified against Cloudflare's API and two resolvers) — not to a Cloudflare address |
+| Relay ports from outside | `21115`, `21116`, `21117`, `21118`, `21119` reachable; UDP `21116` accepts |
+| DNS shape | `relay-demo` resolves straight to the VPS IP (grey cloud) — not a Cloudflare address |
 | hbbs bound to the right relay | log: `relay-servers=["relay-demo.linkzy.dev:21117"]` |
-| **Relay data path** | **paired two peers on different networks through `hbbr` and exchanged payloads both ways.** hbbr logged `Relayrequest T24PROOF from <vps>:54762` then `… from <my ip>:50101 got paired`, and both sides received the other's messages. |
-| Key enforcement | punch-hole with a **wrong** key → `LICENSE_MISMATCH`; with the demo key → accepted |
-| UDP registration | `RegisterPk` over UDP `21116` → `register_pk_response` OK |
-| Gateway points at the new relay | log: `Connected to hbbs at ws://relay-demo.linkzy.dev:21118` |
-| Public UI | `https://rclient-demo.linkzy.dev/` → 200, title `rclient — RustDesk web client`; `/config` → `{"captchaEnabled":false}`; `/ws` upgrades 101 |
+| Key enforcement | wrong key → `LICENSE_MISMATCH`; demo key → accepted |
+| Public UI | 200, title `rclient — RustDesk web client`, `/config` → `{"captchaEnabled":false}`, `/ws` upgrades 101 |
 
-**NOT verified — do not assume it works:**
+**Still NOT verified:**
 
-- **A full session from a real RustDesk host to the browser (video + input).**
-  I could not do this: the only RustDesk I control is configured for a custom
-  relay, and I would not repoint the owner's running client. My synthetic
-  rendezvous attempts could not reproduce what a real client does over the
-  hole-punch/relay handshake, so the last mile is unproven.
-- **Behaviour behind a real NAT/router pair** as opposed to the direct
-  connections I tested.
-- **Latency and frame rate** in practice.
+- **Audio.** The headless host had no sound device (`no /dev/snd`), so no audio
+  was produced or received. If a browser with `AudioDecoder` connects to a host
+  that plays sound, that path is untested.
+- **Two different physical networks.** The test host ran on the same VPS, so
+  gateway↔host went host-to-host; the earlier relay-pairing test did span two
+  networks, but not a real RustDesk session.
+- **Frame rate on real hardware / over long sessions.** ~8 FPS here reflects a
+  virtual display with a software encoder and a mostly static screen; a real
+  desktop with motion will differ.
+- **Reconnect behaviour** after a network drop or a host restart.
 
-To close it: configure one real machine as described above, connect from the
-demo, and confirm video and input. If that works, update this section and the
-status line at the top.
+## How the end-to-end test was run (T26)
+
+Reproducible, and it needed nobody else's machine. All of this was temporary and
+has been removed; nothing here is part of the demo stack.
+
+1. **A headless host.** `linuxserver/rustdesk:1.5.3` (the official client plus
+   Xvfb) as a throwaway container with `--network host`, running plain `Xvfb
+   :1` and `rustdesk --server`. Two things bit me:
+   - the client's server settings live under **`[options]`** in
+     `~/.config/rustdesk/RustDesk2.toml`. Written at top level they are silently
+     ignored and the app falls back to `rs-ny.rustdesk.com`;
+   - the image's default entrypoint starts a whole Selkies desktop, which is
+     unnecessary — `--entrypoint /bin/bash` and a small script is enough.
+   With `key`, `custom-rendezvous-server` and `relay-server` set to the demo, the
+   host registered on our `hbbs` (`update_pk 374804137 …`).
+2. **Something to look at.** `xclock -update 1` and `xterm` on the virtual
+   display, so the screen changes and a keyboard has somewhere to type.
+3. **A real browser.** The Chromium build already cached by Playwright, driven
+   over the DevTools protocol (no Playwright package needed): navigate to
+   <https://rclient-demo.linkzy.dev>, fill the form, click Connect, wait for
+   `canvas`, read `document.body.innerText` for the Stats overlay, send
+   `Input.dispatchKeyEvent`/`dispatchMouseEvent` for input, then
+   `Page.captureScreenshot`.
+4. **Evidence.** Gateway log lines, hbbr's `got paired` line, the browser
+   console's decoder line, the overlay numbers, and the screenshot in
+   `docs/assets/`.
+
+To repeat it: recreate the host container pointed at `relay-demo.linkzy.dev` +
+the key from `/home/demo/relay-data/id_ed25519.pub`, put something on the X
+display, and drive the page in a browser. Remove the container afterwards, as was
+done here.
 
 ## Rotating the demo key
 
@@ -412,11 +463,14 @@ no direct/P2P path to fall back on.
 
 ### Options
 
+Historical — this is the analysis behind the owner's Q6 decision to take option C,
+which is now deployed and verified. Kept so the reasoning is not lost.
+
 | # | Option | Works for a public-network visitor? | Cost / caveats |
 | --- | --- | --- | --- |
-| A | Keep public defaults, wait for RustDesk's relay to return | Eventually, not today | Free. Demo is **degraded now**; nothing we can do. |
+| A | Keep public defaults, wait for RustDesk's relay to return | Eventually, not today | Free, but the demo was unusable while their relay ports were closed. **Rejected.** |
 | B | Own `hbbr` only, gateway points at it | **No** | Useless — visitor stays on the public relay. Do not do this. |
-| C | Own `hbbs` + `hbbr` pair, visitor points RustDesk at the demo | **Yes**, reliably | ~5 MB RAM, 13 MB image, 5 ports; **visitor must be configured** (see below). |
+| C | Own `hbbs` + `hbbr` pair, visitor points RustDesk at the demo | **Yes**, reliably | ~5 MB RAM, 13 MB image, 5 ports; **visitor must be configured**. **Chosen and deployed.** |
 | D | Change the gateway to allow direct connections (no force_relay) | Sometimes | Code change in `gateway/` (not mine); fails behind double NAT; still no relay when hole punching fails. |
 
 ### Resource cost of option C (measured on this host)
@@ -471,18 +525,16 @@ owner's key.
 RustDesk (or runs a RustDesk built with that config). That is no longer "type a
 machine ID and go". It is honest and reliable, but it is a different demo.
 
-### Recommendation
+### Recommendation (superseded by the outcome)
 
-1. **Now:** keep the public defaults and label the demo as **degraded /
-   best-effort** rather than advertising a working session. That is what it is
-   today, and it costs nothing.
-2. **If a reliably-working demo is wanted:** take option C — the runbook below
-   has the concrete plan — and document the two-step setup for the visitor
-   (install RustDesk → set ID Server + Key) on the demo landing page. Verify with
-   a real peer before advertising it.
+1. ~~Keep the public defaults and label the demo degraded.~~ No longer needed.
+2. **Done:** option C was taken — the runbook below is the plan that was
+   executed — and the two-step visitor setup (install RustDesk → set ID Server +
+   Key) is documented at the top of this file. Verified with a real host on
+   2026-11-21.
 3. **Do not** deploy an `hbbr` alone (option B): it looks like a fix and is not.
-4. Tell RustDesk users the demo's status honestly in the README (T15) — do not
-   claim "connect in one click" while the public relay is down.
+4. The demo's status is stated honestly in the README and the Discussion rather
+   than as "connect in one click".
 
 Re-test before acting — this may be a transient RustDesk outage:
 
@@ -692,11 +744,15 @@ configured by the demo.
 2. From outside: `21115`–`21119` open on `relay-demo.linkzy.dev`. ✔ done
 3. `docker logs rclient-demo-gateway` shows a rendezvous against our `hbbs`,
    not `rs-ny.rustdesk.com`. ✔ done
-4. **On a real machine with RustDesk set as in step 5: the ID shows as online,
-   and a session from <https://rclient-demo.linkzy.dev> shows video and accepts
-   input. ✘ NOT DONE** — this is the one step that still needs doing before the
-   demo can honestly be called working.
-5. Only after step 4, change the status at the top of this file.
+4. On a real machine with RustDesk set as in step 5: the ID shows as online, and
+   a session from <https://rclient-demo.linkzy.dev> shows video and accepts
+   input. ✔ done 2026-11-21 — see "What was verified" above, including the
+   Stats-overlay numbers and the screenshot.
+5. Change the status at the top of this file. ✔ done
+
+Repeat this list after any change to the relay, the key or the images. In
+particular, re-run the audio check on a host that has sound, since that is the
+one path never exercised.
 
 ### 7. Rollback
 
