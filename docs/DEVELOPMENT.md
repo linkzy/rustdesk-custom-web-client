@@ -247,8 +247,14 @@ A trace is not just a log: it holds a DOM snapshot per action, the network log,
 the console, the source line of each step, and a screencast. You can click any
 action and see the page as it was.
 
-The report server is never left running: the config uses `open: 'never'`, so
-`index.html` is written and the process exits.
+> `show-trace` starts a local viewer server and **keeps running** until you press
+> Ctrl-C — it is not a command you run in a script or leave in the background. If
+> you would rather not have a server at all, drag `trace.zip` onto
+> <https://trace.playwright.dev>, or open `html-report/index.html`, which bundles
+> the same viewer and needs no server (it is a static file).
+
+The test run itself never leaves a server behind: the config uses
+`open: 'never'`, so the HTML report is written and the process exits.
 
 ### In CI
 
