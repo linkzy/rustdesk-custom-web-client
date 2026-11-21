@@ -360,9 +360,9 @@
       "imposedBy": "HMN",
       "confirmation": "checked-by-agent",
       "status": "done",
-      "current": "Met: e2e/specs/*.spec.mjs run on @playwright/test (root devDependency), 5 scenarios green locally and in external-services mode. playwright.config.mjs: one worker, no local retries, trace + screenshot + video on failure, HTML report written with open:'never' (no server left running). The CI e2e job runs 'npx playwright test --config e2e/playwright.config.mjs' and installs chromium only. e2e/record-demo.mjs deliberately stays on the CDP screencast path because GIF capture needs Page.startScreencast, not assertion tooling.",
+      "current": "Met. The e2e suite is Playwright (@playwright/test, one root devDependency, one worker, no retries locally): e2e/playwright.config.mjs plus e2e/specs/{session,failures}.spec.mjs cover the same five scenarios the CDP runner had. The CDP runner (e2e/run.mjs) is deleted. e2e/stack.mjs stayed tool-agnostic and untouched. The README recorder, e2e/record-demo.mjs, deliberately stays on Page.startScreencast — Playwright is for assertions and traces, not for capturing every painted frame — and is reachable as `npm run record:demo`; it writes demo-synthetic.* to the system temp directory so it can never overwrite docs/assets/demo.gif.",
       "check": "`npx playwright test` in e2e/ runs the five scenarios green, CI's e2e job uses it, and a failing run produces a usable trace.",
-      "updatedAt": 1795289064038,
+      "updatedAt": 1795289089981,
       "updatedBy": "scribe"
     },
     {
