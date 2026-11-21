@@ -274,10 +274,10 @@
       ],
       "imposedBy": "HMN",
       "confirmation": "checked-by-agent",
-      "status": "partial",
-      "current": "Evidence complete, merge pending: protobufjs 8.8.1 passes 50/50 gateway unit tests, a full fake-host session (login, TestDelay echoes, 24 video frames, mouse, keyboard) and 5/5 e2e scenarios. Across 19 message cases 9 encode byte-identically and 10 differ only by proto3 default-value omission; all 19 decode to the same logical object with defaults:true. Oneof presence (the one way omission could change meaning) verified separately on 8.8.1: a oneof member holding its default value stays on the wire and keeps its union member. #28 unmerged, #37 open, branch proto8-verify holds the harness.",
+      "status": "done",
+      "current": "Met: protobufjs is ^8.8.1 on main (commit 55e2d13). Verified before merging: 50/50 gateway tests, a full fake-host session, 5/5 e2e, 19 message cases encoding identically apart from proto3 default omission and decoding to the same object, and oneof presence preserved (probe-oneof.cjs). #28 closed pointing at the merge; #37 closed.",
       "check": "cd gateway && npm run build && cp -r src/proto dist/proto; node test/fake-host/compare-bytes.cjs and cross-decode.cjs on each version, then diff-bytes.cjs/diff-decode.cjs over the two JSONs; node test/fake-host/protocol-run.mjs against a gateway on the version under test; npm run test:e2e",
-      "updatedAt": 1795285458133,
+      "updatedAt": 1795285767315,
       "updatedBy": "core"
     },
     {
