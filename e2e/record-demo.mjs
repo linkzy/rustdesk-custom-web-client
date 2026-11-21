@@ -1,3 +1,14 @@
+// Records a reproducible synthetic demo: connect form -> connect -> the fake
+// host's test pattern -> a mouse move -> a short typing burst.
+//
+//   npm run record:demo            writes to the system temp directory
+//   node e2e/record-demo.mjs --out /tmp/try
+//
+// The README hero (docs/assets/demo.gif) is a REAL session, recorded by the
+// maintainer. This script never writes into the repository, so running it can
+// never overwrite that hero or add a second GIF. The output carries a burnt-in
+// badge saying it is the fake host.
+
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -9,9 +20,13 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(here, '..');
 
 const args = process.argv.slice(2);
+// Generated output goes to the temp directory, not docs/assets: it is build
+// output, and keeping it out of the tree means running this can never overwrite
+// the README hero (a real session) or add a second GIF to the repo. Pass --out to
+// choose a location explicitly.
 const outBase = args.includes('--out')
   ? path.resolve(args[args.indexOf('--out') + 1])
-  : path.join(REPO_ROOT, 'docs', 'assets', 'demo');
+  : path.join(os.tmpdir(), 'rclient-demo-synthetic');
 
 const FPS = 15;
 const FRAMES_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'rclient-demo-frames-'));
