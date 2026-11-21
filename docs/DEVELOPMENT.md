@@ -213,7 +213,7 @@ The GIF at the top of the README is recorded, not hand-made. One command, from t
 repository root:
 
 ```bash
-node e2e/record-demo.mjs
+npm run record:demo        # same as: node e2e/record-demo.mjs
 ```
 
 It starts the fake RustDesk host, the gateway and the Vite dev server on ephemeral

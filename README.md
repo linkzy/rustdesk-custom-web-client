@@ -14,10 +14,15 @@ control a machine from a browser on a computer where you cannot install anything
 <img src="./docs/assets/demo.gif" alt="rclient in a browser: filling the Device ID and password, connecting, then the remote screen with the session toolbar and a note that 25 key events reached the host. A synthetic session against the project's fake RustDesk host, not a real desktop." width="880">
 
 <sub>**This recording is a synthetic session**, made against the project's fake
-RustDesk host (the animated test pattern), so anyone can regenerate it — the steps
+RustDesk host (its animated test pattern), so anyone can reproduce it — the steps
 are in [`docs/DEVELOPMENT.md`](./docs/DEVELOPMENT.md#regenerating-the-readme-demo).
-A real, verified session against a real desktop looks like
-[this screenshot](./docs/assets/demo-session.png) (see the demo note below).</sub>
+
+The product itself has been **verified end to end against a real desktop**: a real
+RustDesk host on the demo relay, driven from this browser app, with live video and
+mouse/keyboard input reaching the machine. That session is
+[this screenshot](./docs/assets/demo-session.png), and the evidence is in
+[`deploy/DEMO.md`](./deploy/DEMO.md). The GIF above is the fake host on purpose —
+it is the one anyone can regenerate.</sub>
 
 > **Try it: [rclient-demo.linkzy.dev](https://rclient-demo.linkzy.dev)**
 >
