@@ -359,10 +359,10 @@
       "imposedBy": "HMN",
       "confirmation": "checked-by-agent",
       "status": "done",
-      "current": "Met: e2e runs on @playwright/test 1.65.1 (root devDependency, chromium only). Five scenarios ported with the same assertions; run.mjs deleted; CI's e2e job runs npx playwright test. Core re-ran it on the merged tree: 5 passed in 28.8s, then 50 gateway + 97 web unit tests. record-demo.mjs stays CDP.",
+      "current": "Met: e2e/specs/*.spec.mjs run on @playwright/test (root devDependency), 5 scenarios green locally and in external-services mode. playwright.config.mjs: one worker, no local retries, trace + screenshot + video on failure, HTML report written with open:'never' (no server left running). The CI e2e job runs 'npx playwright test --config e2e/playwright.config.mjs' and installs chromium only. e2e/record-demo.mjs deliberately stays on the CDP screencast path because GIF capture needs Page.startScreencast, not assertion tooling.",
       "check": "`npx playwright test` in e2e/ runs the five scenarios green, CI's e2e job uses it, and a failing run produces a usable trace.",
-      "updatedAt": 1795288751656,
-      "updatedBy": "core"
+      "updatedAt": 1795288829816,
+      "updatedBy": "tester"
     }
   ]
 }
