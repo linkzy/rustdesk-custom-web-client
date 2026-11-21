@@ -9,6 +9,10 @@ import { DEFAULTS, SCREEN, deterministicKeypair, type FakeHostOptions } from './
 export interface FakeHost {
   /** Where the gateway should be pointed. */
   readonly options: FakeHostOptions;
+  /** Port hbbs actually bound (differs from options when it was 0). */
+  hbbsPort(): number;
+  /** Port hbbr actually bound (differs from options when it was 0). */
+  hbbrPort(): number;
   /** Port the control API actually bound (differs from options when it was 0). */
   actualControlPort(): number;
   /** Live session stats, or null before the first connection. */
@@ -105,6 +109,8 @@ export async function startFakeHost(opts: StartOptions = {}): Promise<FakeHost> 
 
   const host: FakeHost = {
     options,
+    hbbsPort: () => servers.hbbsPort(),
+    hbbrPort: () => servers.hbbrPort(),
     actualControlPort: () => control.port,
     sessionStats: () => session?.stats ?? null,
     events: (type) => (type ? eventLog.filter((e) => e.type === type) : [...eventLog]),
@@ -126,7 +132,7 @@ export async function startFakeHost(opts: StartOptions = {}): Promise<FakeHost> 
   };
 
   if (opts.log) {
-    opts.log(`[fake-host] ready id=${options.id} hbbs=${options.hbbsPort} hbbr=${options.hbbrPort} control=${options.controlPort}`);
+    opts.log(`[fake-host] ready id=${options.id} hbbs=${host.hbbsPort()} hbbr=${host.hbbrPort()} control=${host.actualControlPort()}`);
     opts.log(`[fake-host] screen ${SCREEN.width}x${SCREEN.height} @ ${SCREEN.fps} fps VP9`);
   }
 

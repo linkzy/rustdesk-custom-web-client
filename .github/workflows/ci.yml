@@ -77,3 +77,139 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  e2e:
+    name: e2e
+    runs-on: ubuntu-latest
+    # A real browser against a live session: a couple of minutes, not a couple
+    # of seconds. The cap keeps a hang from eating a runner.
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22 # same major as .nvmrc and the Dockerfiles
+          cache: npm
+          cache-dependency-path: |
+            gateway/package-lock.json
+            web/package-lock.json
+
+      - name: Install gateway dependencies
+        working-directory: gateway
+        run: npm ci
+
+      - name: Install web dependencies
+        working-directory: web
+        run: npm ci
+
+      # Each workflow step is a fresh process, so the stack is started as
+      # background services and the tests attach to them by URL. The test runner
+      # never owns the fake host's lifetime.
+      - name: Start the fake RustDesk host
+        working-directory: gateway
+        run: |
+          nohup npm run fake-host -- --quiet > /tmp/fake-host.log 2>&1 &
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:8081/fake/health > /dev/null; then
+              echo "fake host ready"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "fake host did not become healthy"
+          cat /tmp/fake-host.log
+          exit 1
+
+      - name: Start the gateway
+        working-directory: gateway
+        env:
+          GATEWAY_PORT: '4000'
+          HBBS_HOST: '127.0.0.1'
+          HBBS_WS_PORT: '21118'
+          HBBR_HOST: '127.0.0.1'
+          HBBR_WS_PORT: '21119'
+        run: |
+          nohup npm run dev > /tmp/gateway.log 2>&1 &
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:4000/config > /dev/null; then
+              echo "gateway ready"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "gateway did not become healthy"
+          cat /tmp/gateway.log
+          exit 1
+
+      - name: Build the web app
+        working-directory: web
+        run: npm run build
+
+      # The app talks to /ws and /config on its own origin and neither vite
+      # preview nor a static server proxies those, so the harness serves the
+      # build and proxies to this job's gateway (e2e/serve.mjs).
+      - name: Serve the built web app
+        run: |
+          PORT=5173 GATEWAY=http://127.0.0.1:4000 \
+            nohup node e2e/serve.mjs > /tmp/web.log 2>&1 &
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:5173/ > /dev/null; then
+              echo "web app ready"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "web app did not become healthy"
+          cat /tmp/web.log
+          exit 1
+
+      # The browser-driven suite: e2e/run.mjs, which needs no packages of its own
+      # (it borrows ws from gateway/). The browser is the only thing to install;
+      # Ubuntu runners ship Chrome, and installing chromium via Playwright would
+      # need Playwright itself, so fall back to apt.
+      - name: Install a headless browser
+        run: |
+          if command -v google-chrome >/dev/null 2>&1 || command -v chromium >/dev/null 2>&1 \
+             || command -v chromium-browser >/dev/null 2>&1; then
+            echo "a chromium-class browser is already present"
+            exit 0
+          fi
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends chromium-browser || \
+            sudo apt-get install -y --no-install-recommends chromium
+
+      - name: Run the end-to-end tests
+        env:
+          E2E_EXTERNAL: '1'
+          E2E_GATEWAY_URL: http://127.0.0.1:4000
+          E2E_APP_URL: http://127.0.0.1:5173
+          E2E_CONTROL_URL: http://127.0.0.1:8081
+          E2E_ID: '123456789'
+          E2E_PASSWORD: demo
+        run: node e2e/run.mjs
+
+      # On a failure the page state is what you need, so keep the trace,
+      # screenshot and video instead of just the log.
+      - name: Upload the failure artefacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-artifacts
+          path: e2e/.artifacts
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Upload service logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-service-logs
+          path: |
+            /tmp/fake-host.log
+            /tmp/gateway.log
+            /tmp/web.log
+          retention-days: 7
+          if-no-files-found: ignore

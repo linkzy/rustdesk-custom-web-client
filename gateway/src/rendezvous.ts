@@ -130,13 +130,21 @@ export async function performRendezvous(
           // Actual failures (non-zero enum values)
           if (resp.failure === 'OFFLINE' || resp.failure === 'LICENSE_MISMATCH' || resp.failure === 'LICENSE_OVERUSE') {
             clearTimeout(timeout);
-            ws.close();
+
             if (resp.failure === 'OFFLINE' && attempt < MAX_ATTEMPTS) {
+              // Mark settled *before* closing: otherwise the close handler below
+              // rejects with "hbbs closed connection unexpectedly" and the retry
+              // never runs — which is what made an unknown ID surface as a
+              // generic error instead of the friendly offline message.
+              resolved = true;
+              ws.close();
               console.log(`[rendezvous] Peer OFFLINE (attempt ${attempt}/${MAX_ATTEMPTS}), retrying in 2s...`);
               setTimeout(() => {
                 performRendezvous(targetId, attempt + 1, serverConfig).then(resolve).catch(reject);
               }, 2000);
             } else {
+              resolved = true;
+              ws.close();
               const hint = resp.failure === 'OFFLINE'
                 ? 'OFFLINE — make sure the RustDesk app is running and connected to your server'
                 : resp.failure;
