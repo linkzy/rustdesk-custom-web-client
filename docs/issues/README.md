@@ -59,6 +59,7 @@ labels.
 | `040-file-transfer.md` | R-14 | help wanted, area:gateway | v0.4.0 |
 | `041-multi-monitor.md` | R-12 | help wanted, area:gateway | v0.4.0 |
 | `042-internationalisation.md` | R-21 | help wanted, area:web | v0.4.0 |
+| `060-add-a-language.md` | R-27 | good first issue, area:web, area:docs | v0.4.0 |
 | `050-docs-screenshots.md` | — | good first issue, area:docs | v0.2.0 |
 | `090-scanner-noise.md` | R-18 | help wanted, area:deploy, documentation | v0.2.0 |
 | `091-reverse-proxy-examples.md` | R-25 | good first issue, area:docs, documentation | v0.2.0 |

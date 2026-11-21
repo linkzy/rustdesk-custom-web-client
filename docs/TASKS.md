@@ -22,7 +22,8 @@ history.
 **Shipped features:** H264/VP9/VP8/AV1 video via WebCodecs (R-11 tuning),
 keyboard and mouse input, audio (Opus via `AudioDecoder`, R-09), fullscreen
 (R-05), fit / 1:1 scaling (R-06), per-connection relay settings (R-03), hCaptcha
-(R-04), a debug overlay, and the "Remember password" opt-in (R-20).
+(R-04), a debug overlay, colour themes, the "Remember password" opt-in (R-20), and
+internationalisation with English + pt-BR (R-21).
 
 **Fixed issues:** KI-001 (10-second disconnect), KI-004 (scroll direction),
 KI-005 (keyboard case/layout). See `docs/KNOWN_ISSUES.md`.
@@ -79,7 +80,8 @@ Large, protocol-heavy or design-heavy work. Discuss before starting.
 |---|---|---|---|---|---|
 | R-14 | File transfer | Upload/download between browser and host (`FileAction`/`FileResponse` exist in the proto). | `gateway/src/session.ts`, new UI | hard | help wanted |
 | R-12 | Multi-monitor | The gateway reads only `displays[0]`; hosts with several screens are stuck on one. | `gateway/src/session.ts` (`handlePeerInfo`) | hard | help wanted |
-| R-21 | Internationalisation (i18n) | All UI strings are hardcoded English in JSX. | new `web/src/i18n/`, components | medium | help wanted |
+| R-21 | Internationalisation (i18n) | All UI strings are hardcoded English in JSX. | `web/src/i18n/` — **done**, English + pt-BR, see `docs/TRANSLATING.md` | medium | — |
+| R-27 | Add a language (translation contributions) | One catalogue file and one registration line; the parity test keeps translations from drifting. | new `web/src/i18n/<tag>.ts`, `web/src/i18n/index.ts` | easy | good first issue |
 | R-22 | Themes (light/dark) | Colours are hardcoded in the CSS modules. | `web/src/**/*.module.css` | medium | good first issue |
 
 ---
@@ -98,6 +100,7 @@ without a RustDesk host. Full drafts in [`docs/issues/`](./issues/).
 | R-23 | Audio mute + volume | `web/src/video/audio.ts` | One component, one `GainNode`. |
 | R-24 | Shortcut help overlay | new `web/src/components/ShortcutHelp.tsx` | Pure UI, static content. |
 | R-22 | Theme toggle | `web/src/**/*.module.css`, `App.tsx` | CSS variables and a persisted preference. |
+| R-27 | Add a language | new `web/src/i18n/<tag>.ts`, `web/src/i18n/index.ts` | Copy one file, translate, one line; the parity test does the reviewing. |
 | — | Screenshots for the docs | `docs/assets/` (new) | Needs a real session; coordinate with the maintainer. |
 
 `R-18`, `R-19` and everything in v0.3.0/v0.4.0 are `help wanted`: they need a real
@@ -114,8 +117,8 @@ RustDesk host, protocol insight, or more than a day's work.
 - **Labels**: `enhancement` (or `bug` for KI-006), plus exactly one of
   `good first issue` / `help wanted`, plus an `area:` label (see
   `docs/issues/README.md`).
-- **Renumbering:** the roadmap ids `R-21`–`R-26` are new entries created with this
-  roadmap. `R-20` was the Remember-password fix, already shipped.
+- **Renumbering:** `R-21`–`R-26` came with this roadmap and `R-27` with the i18n
+  contribution surface. `R-20` was the Remember-password fix, already shipped.
 - **Closing an item** means: the code is merged, `docs/TASKS.md` and
   `docs/KNOWN_ISSUES.md` agree, and the issue is closed by the PR.
 
