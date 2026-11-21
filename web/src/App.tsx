@@ -112,6 +112,7 @@ function App() {
           onDisconnect={controls.disconnect}
           status={state.status}
           error={state.error}
+          reconnect={state.reconnect}
           showDebug={showDebug}
           onShowDebugChange={setShowDebug}
           theme={theme.preference}
