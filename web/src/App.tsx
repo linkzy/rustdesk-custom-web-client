@@ -5,7 +5,9 @@ import { RemoteScreen } from './components/RemoteScreen';
 import { DebugPanel } from './components/DebugPanel';
 import { StatsOverlay } from './components/StatsOverlay';
 import { ThemeSelect } from './components/ThemeSelect';
+import { LanguageSelect } from './components/LanguageSelect';
 import { useTheme } from './utils/theme';
+import { useI18n } from './i18n';
 import { commitPasswordAfterConnect, discardPasswordAttempt } from './utils/passwordStorage';
 import styles from './App.module.css';
 
@@ -24,6 +26,7 @@ function App() {
 
   const [isFullscreen, setIsFullscreen] = useState(false);
   const theme = useTheme();
+  const { locale, setLocale, t } = useI18n();
 
   useEffect(() => {
     const onChange = () => setIsFullscreen(!!document.fullscreenElement);
@@ -59,7 +62,7 @@ function App() {
       {isConnected ? (
         <>
           {!isFullscreen && (
-            <div className={styles.toolbar} role="toolbar" aria-label="Session controls">
+            <div className={styles.toolbar} role="toolbar" aria-label={t('toolbar.label')}>
               <span className={styles.toolbarTitle}>rclient</span>
               <span className={styles.toolbarInfo}>
                 {state.remoteWidth}×{state.remoteHeight} · {state.codec?.toUpperCase()}
@@ -67,34 +70,41 @@ function App() {
               <button
                 className={`${styles.toolbarBtn} ${fitToWindow ? styles.toolbarBtnActive : ''}`}
                 onClick={toggleFit}
-                title={fitToWindow ? 'Switch to 1:1 (native resolution)' : 'Switch to Fit (scale to window)'}
+                title={fitToWindow ? t('toolbar.fitTitleOn') : t('toolbar.fitTitleOff')}
                 aria-pressed={fitToWindow}
-                aria-label={fitToWindow ? 'Fit to window, on' : 'Fit to window, off'}
+                aria-label={fitToWindow ? t('toolbar.fitAriaOn') : t('toolbar.fitAriaOff')}
               >
-                <span aria-hidden="true">{fitToWindow ? '⊡ Fit' : '1:1'}</span>
+                <span aria-hidden="true">{fitToWindow ? `⊡ ${t('toolbar.fit')}` : t('toolbar.native')}</span>
               </button>
               <button
                 className={styles.toolbarBtn}
                 onClick={toggleFullscreen}
-                title="Fullscreen"
-                aria-label="Enter fullscreen"
+                title={t('toolbar.fullscreen')}
+                aria-label={t('toolbar.enterFullscreen')}
               >
-                <span aria-hidden="true">⛶ Fullscreen</span>
+                <span aria-hidden="true">⛶ {t('toolbar.fullscreen')}</span>
               </button>
+              <LanguageSelect
+                className={styles.themeSelect}
+                value={locale}
+                onChange={setLocale}
+                t={t}
+              />
               <ThemeSelect
                 className={styles.themeSelect}
                 value={theme.preference}
                 onChange={theme.setPreference}
+                t={t}
               />
               <button className={styles.disconnectBtn} onClick={controls.disconnect}>
-                Disconnect
+                {t('toolbar.disconnect')}
               </button>
             </div>
           )}
           <div className={isFullscreen ? styles.screenFullscreen : (fitToWindow ? styles.screenFit : styles.screenNative)}>
             <RemoteScreen state={state} controls={controls} onLog={controls.addLog} fitToWindow={fitToWindow} />
           </div>
-          {showDebug && !isFullscreen && <StatsOverlay stats={state.stats} />}
+          {showDebug && !isFullscreen && <StatsOverlay stats={state.stats} t={t} />}
         </>
       ) : (
         <ConnectForm
@@ -106,9 +116,12 @@ function App() {
           onShowDebugChange={setShowDebug}
           theme={theme.preference}
           onThemeChange={theme.setPreference}
+          locale={locale}
+          onLocaleChange={setLocale}
+          t={t}
         />
       )}
-      {showDebug && !isFullscreen && <DebugPanel logs={state.logs} />}
+      {showDebug && !isFullscreen && <DebugPanel logs={state.logs} t={t} />}
     </div>
   );
 }

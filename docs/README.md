@@ -12,6 +12,7 @@ fresh context.)
 | **Try it** without installing anything | the public demo, <https://rclient-demo.linkzy.dev> — see [`../deploy/DEMO.md`](../deploy/DEMO.md) |
 | **Run it locally** and change code | [`DEVELOPMENT.md`](./DEVELOPMENT.md) — Node 22, `npm ci` in both packages, the gateway `.env`, both dev servers, what the Vite proxy does |
 | **Contribute** a fix or feature | [`../CONTRIBUTING.md`](../CONTRIBUTING.md) and the open issues labelled `good first issue` / `help wanted` |
+| **Translate the UI** | [`I18N.md`](./I18N.md) — one catalogue file and one registration line, no framework |
 | **Understand how it works** | [`ARCHITECTURE.md`](./ARCHITECTURE.md) — components, the browser↔gateway API, the connection lifecycle, limitations |
 | **Work on the protocol** | [`PROTOCOL.md`](./PROTOCOL.md) — framing, handshake, encryption, video/audio/input messages |
 | **Know what is finished** | [`TASKS.md`](./TASKS.md) — milestone roadmap; [`issues/`](./issues/) has the ready-to-paste issues |
@@ -33,9 +34,11 @@ fresh context.)
 | [`TASKS.md`](./TASKS.md) | Completed phases, the milestone roadmap, and the good-first-issue set. |
 | [`RELEASING.md`](./RELEASING.md) | The release checklist: bump the three manifests, changelog entry, checks, tag, what image tags the tag publishes, GitHub Release, and the badge that goes with it. |
 | [`issues/`](./issues/) | Ready-to-paste GitHub issues and the pinned roadmap post, with publishing order. |
+| [`SECURITY-REVIEW.md`](./SECURITY-REVIEW.md) | Reviewer's checklist for fork PRs: what to check in a diff before running anything from a fork. |
 | [`KNOWN_ISSUES.md`](./KNOWN_ISSUES.md) | Each confirmed bug with symptoms, root cause and the fix (or the next steps when open). |
 | [`AI_GUIDELINES.md`](./AI_GUIDELINES.md) | Conventions, environment variables, design decisions and 13 protocol pitfalls. Overlaps `../AGENTS.md`; this one goes deeper. |
-| [`../deploy/DEMO.md`](../deploy/DEMO.md) | The public demo instance: host snapshot, architecture, deployment, redeploy, limits and the public-relay caveat. |
+| [`../deploy/DEMO.md`](../deploy/DEMO.md) | The public demo instance on its own relay pair: architecture, deployment, redeploy, limits, and the session verified end to end. |
+| [`I18N.md`](./I18N.md) | Adding or fixing a language: one catalogue file, one registration line, and the checks that guard parity. |
 
 ## Conventions in this folder
 

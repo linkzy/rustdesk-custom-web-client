@@ -50,7 +50,7 @@ Everything a stranger needs to trust and try the repo. Mostly Phase 1 leftovers.
 | R-24 | Keyboard shortcut help overlay | Nothing in the app explains what is forwarded and what is not. | new `web/src/components/ShortcutHelp.tsx` | easy | good first issue |
 
 **Already landed for this milestone** (not issues): the vitest suite in both
-packages (`npm test`, 24 gateway + 25 web), CI on pull requests
+packages (`npm test`, 45 gateway + 93 web), CI on pull requests
 (`.github/workflows/ci.yml`, lint → typecheck → test → build) and the lint fixes
 that make that pipeline green.
 
