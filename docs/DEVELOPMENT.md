@@ -303,10 +303,19 @@ WEB_PORT=8080 docker compose -f docker-compose.yml up -d --build
 
 ---
 
-## Regenerating the README demo
+## The README demo and how to regenerate it
 
-The GIF at the top of the README is recorded, not hand-made. One command, from the
-repository root:
+There are two things worth knowing, and they are not the same.
+
+**`docs/assets/demo.gif` — the README hero: a real session.** Recorded by the
+maintainer on the demo relay against a throwaway test host (a clock and a plain
+shell), with the browser app driving it: connect, then typed text landing in the
+remote terminal. It is **not regenerable by a script** — it needs a live session
+and a machine to drive, and it was captured and frame-checked by hand. If it needs
+replacing, do the same: record, then check frame by frame that no real machine ID,
+hostname or window content is legible before committing it.
+
+**A reproducible synthetic clip — generated into a temp directory.** One command:
 
 ```bash
 npm run record:demo        # same as: node e2e/record-demo.mjs
@@ -314,20 +323,23 @@ npm run record:demo        # same as: node e2e/record-demo.mjs
 
 It starts the fake RustDesk host, the gateway and the Vite dev server on ephemeral
 ports (`e2e/stack.mjs`), drives Chrome over the DevTools protocol through the whole
-flow — connect form, typing the ID and password, connecting, the session, a mouse
-move, a short typing burst — captures every painted frame with
-`Page.startScreencast`, and encodes them to `docs/assets/demo.gif` plus a poster
-still, `docs/assets/demo.png`.
+flow — connect form, typing the ID and password, connecting, the fake host's
+session, a mouse move, a short typing burst — captures every painted frame with
+`Page.startScreencast`, and encodes them with `ffmpeg` to
+`demo-synthetic.gif` + `demo-synthetic.png` **in the system temp directory**
+(`--out <path>` to choose). It never writes into the repository: running it can
+never overwrite the real hero or add a second GIF.
 
-- **Deterministic in substance, not frame-for-frame.** The picture comes from the
-  fake host's own clip and the interaction is scripted, so every run shows the same
+- **Deterministic in substance, not frame-for-frame.** Every run shows the same
   steps and the same "25 key events received" figure; the frame count varies by a
-  few because the capture follows real paints (≈10 s, 150–165 frames).
-- **Synthetic by design**, and the clip says so on screen. It is a test pattern,
-  not a desktop; do not present it otherwise. `docs/assets/demo-session.png` is the
-  real, verified session, and the README links both.
+  few because the capture follows real paints (≈10 s, 150–170 frames).
+- **Synthetic by design**, and a badge in every frame says so. It is a test
+  pattern, not a desktop; if you ever use it as a hero, say so in the caption.
 - **Needs** Chrome or Edge (set `E2E_CHROME_PATH` if it is not in a standard
-  location) and `ffmpeg` on `PATH`.
+- **Needs** Chrome or Edge (set `E2E_CHROME_PATH` if it is not in a standard
+  location) and `ffmpeg` on `PATH`. The end-to-end suite is separate: it uses
+  Playwright's own Chromium (`npx playwright install chromium`) and does not
+  launch a system browser, so the recorder and the suite share no browser setup.
 - **Stays on the DevTools protocol, not Playwright, on purpose.** The recorder
   needs `Page.startScreencast` — a stream of the painted frames — and then
   encodes them to a GIF. Playwright is built for assertions and traces, not for
@@ -337,7 +349,8 @@ still, `docs/assets/demo.png`.
   oversight. `npm run record:demo` runs it.
 - `--out <path-without-extension>` writes somewhere else, e.g.
   `--out /tmp/demo` for a throwaway copy.
-- Keep the GIF under ~5 MB. It is ~0.2 MB today at 960×600, 15 fps, ~10 s.
+- Keep the real hero under ~2 MB; it is 270 KB today, and the synthetic clip is
+  ~0.2 MB at 960×600, 15 fps, ~10 s.
 ---
 
 ## 6. Branches and commits

@@ -11,18 +11,13 @@ control a machine from a browser on a computer where you cannot install anything
 [![good first issues](https://img.shields.io/github/issues/linkzy/rustdesk-custom-web-client/good%20first%20issue?label=good%20first%20issues)](https://github.com/linkzy/rustdesk-custom-web-client/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)
 [![version](https://img.shields.io/github/v/release/linkzy/rustdesk-custom-web-client?label=version)](https://github.com/linkzy/rustdesk-custom-web-client/releases)
 
-<img src="./docs/assets/demo.gif" alt="rclient in a browser: filling the Device ID and password, connecting, then the remote screen with the session toolbar and a note that 25 key events reached the host. A synthetic session against the project's fake RustDesk host, not a real desktop." width="880">
+<img src="./docs/assets/demo.gif" alt="rclient in a browser: the connect form filled with the placeholder ID 000 000 000 and a masked password, then a live remote desktop — a clock and a plain shell — where the text echoed from the browser appears in the terminal." width="880">
 
-<sub>**This recording is a synthetic session**, made against the project's fake
-RustDesk host (its animated test pattern), so anyone can reproduce it — the steps
-are in [`docs/DEVELOPMENT.md`](./docs/DEVELOPMENT.md#regenerating-the-readme-demo).
-
-The product itself has been **verified end to end against a real desktop**: a real
-RustDesk host on the demo relay, driven from this browser app, with live video and
-mouse/keyboard input reaching the machine. That session is
-[this screenshot](./docs/assets/demo-session.png), and the evidence is in
-[`deploy/DEMO.md`](./deploy/DEMO.md). The GIF above is the fake host on purpose —
-it is the one anyone can regenerate.</sub>
+<sub>Recorded from a live session against a **throwaway test host on the demo
+relay** (a clock and a plain shell, no real machine or credentials), with the
+browser app driving it end to end: connect, then typed text landing in the remote
+terminal. Audio is not included — that host has no sound device.
+[Still frame](./docs/assets/demo.png) · [the same session, with stats](./docs/assets/demo-session.png)</sub>
 
 > **Try it: [rclient-demo.linkzy.dev](https://rclient-demo.linkzy.dev)**
 >
