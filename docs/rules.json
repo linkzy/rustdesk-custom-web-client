@@ -342,6 +342,27 @@
       "check": "GitHub repo settings -> Branches -> main shows the two required checks and force-push/deletion blocked.",
       "updatedAt": 1795144532299,
       "updatedBy": "core"
+    },
+    {
+      "id": "PROJ-015",
+      "area": "PROJ",
+      "stage": "A",
+      "text": "The end-to-end suite uses Playwright, so a contributor can write and debug tests with a tool they already know (traces, HTML report, auto-waiting). The README recorder stays on the CDP screencast path.",
+      "action": "T32 migrates the five scenarios to Playwright and switches the CI e2e job; the CDP runner is removed once parity is proven.",
+      "citations": [
+        {
+          "source": "HUM",
+          "location": "Answer to Q11",
+          "excerpt": "Install Playwright (recommended, better for contributors)"
+        }
+      ],
+      "imposedBy": "HMN",
+      "confirmation": "found",
+      "status": "missing",
+      "current": "Diverges: e2e/run.mjs is a hand-rolled CDP runner; Playwright is not installed.",
+      "check": "`npx playwright test` in e2e/ runs the five scenarios green, CI's e2e job uses it, and a failing run produces a usable trace.",
+      "updatedAt": 1795286612528,
+      "updatedBy": "core"
     }
   ]
 }
