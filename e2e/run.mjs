@@ -2,13 +2,11 @@
 //
 //   npm run test:e2e            (from the repo root, or from e2e/)
 //
-// Why not Playwright: the owner has not approved the download yet, and this
-// repo already proves the technique in gateway/test/fake-host/browser-check.mjs.
-// It needs no new dependency (ws comes from gateway/) and runs on Linux CI.
-//
-// The Playwright variant lives beside this file (playwright.config.mjs +
-// specs/); if it is approved, `npm run test:e2e:playwright` takes over and this
-// file can retire.
+// The tool choice was settled on CDP over Playwright: it needs no new
+// dependency (ws comes from gateway/), installs nothing beyond a browser the
+// machine already has, and reuses the technique proven in
+// gateway/test/fake-host/browser-check.mjs. This is the only harness in the
+// repo — there is no Playwright variant to keep in sync.
 //
 // Every scenario asserts on what a user gets: a canvas that is painting and
 // keeps changing, input that reached the machine, and the friendly error text.
@@ -305,18 +303,36 @@ class Page {
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 /**
+ * Hard ceiling for one scenario, measured from the moment its page is opened.
+ * The per-wait timeouts below are deliberately smaller than this: the cap is
+ * the backstop that stops a stuck scenario from holding a browser indefinitely
+ * on a small machine, not the mechanism a normal failure uses.
+ */
+const SCENARIO_TIMEOUT_MS = 20_000;
+
+/**
  * Polls until `fn` returns a truthy value. Replaces arbitrary sleeps: the
  * predicate reads real state (the fake host's counters, the canvas) instead.
  */
-async function waitFor(fn, { timeoutMs = 30_000, what = 'condition', intervalMs = 100 } = {}) {
+async function waitFor(fn, { timeoutMs = 15_000, what = 'condition', intervalMs = 100 } = {}) {
   const deadline = Date.now() + timeoutMs;
-  let last;
   while (Date.now() < deadline) {
-    last = await fn();
-    if (last) return last;
+    if (await fn()) return true;
     await sleep(intervalMs);
   }
   throw new Error(`timed out after ${timeoutMs}ms waiting for ${what}`);
+}
+
+/** Races `promise` against the scenario ceiling. */
+function withDeadline(promise, ms, what) {
+  let timer;
+  const guard = new Promise((_, reject) => {
+    timer = setTimeout(
+      () => reject(new Error(`scenario exceeded its ${ms}ms limit (stuck waiting for ${what})`)),
+      ms,
+    );
+  });
+  return Promise.race([promise, guard]).finally(() => clearTimeout(timer));
 }
 
 // ---------------------------------------------------------------------------
@@ -331,20 +347,15 @@ function scenario(name, fn) {
 scenario('connects and streams video that keeps changing', async ({ page, stack }) => {
   await page.connect({ id: stack.fakeHost.id, password: stack.fakeHost.password });
 
-  await waitFor(async () => (await page.text()).includes('canvas') || await page.hasCanvas(), {
-    what: 'the remote screen to appear',
-  });
+  await waitFor(() => page.hasCanvas(), { what: 'the remote screen to appear' });
 
   // The fake host's own counter, not a wall clock.
   await stack.control.waitForFrames(10);
 
-  const colours = await waitFor(
-    async () => {
-      const n = await page.canvasColours();
-      return n > 3 ? n : 0;
-    },
-    { what: 'the canvas to paint a decoded frame' },
-  );
+  await waitFor(async () => (await page.canvasColours()) > 3, {
+    what: 'the canvas to paint a decoded frame',
+  });
+  const colours = await page.canvasColours();
 
   // A still image would pass the colour check; two samples must differ.
   const first = await page.canvasFingerprint();
@@ -354,17 +365,20 @@ scenario('connects and streams video that keeps changing', async ({ page, stack 
 
   const header = await page.text();
   const { width, height } = stack.fakeHost.screen;
-  if (!header.includes(`${width}x${height}`)) {
-    throw new Error(`header does not report ${width}x${height}; page says: ${header.slice(0, 200)}`);
+  // App.tsx renders "640×360 · H264" with U+00D7, not ASCII 'x'.
+  const expected = `${width}\u00d7${height}`;
+  if (!header.includes(expected)) {
+    throw new Error(`header does not report ${expected}; page says: ${header.slice(0, 200)}`);
   }
-  return `${colours} colours, header ${width}x${height}`;
+  return `${colours} colours, header ${expected}`;
 });
 
 scenario('a click reaches the machine at the coordinates clicked', async ({ page, stack }) => {
   await page.connect({ id: stack.fakeHost.id, password: stack.fakeHost.password });
   await stack.control.waitForFrames(10);
 
-  const box = await waitFor(() => page.canvasBox(), { what: 'the canvas geometry' });
+  await waitFor(async () => (await page.canvasBox()) !== null, { what: 'the canvas geometry' });
+  const box = await page.canvasBox();
   await stack.control.clearEvents();
 
   // Pick a point inside the frame and translate it the way a user's click does.
@@ -375,13 +389,17 @@ scenario('a click reaches the machine at the coordinates clicked', async ({ page
     box.y + (clickY / box.ph) * box.height,
   );
 
-  const events = await waitFor(async () => {
-    const e = await stack.control.events('mouse');
-    return e.length ? e : 0;
-  }, { what: 'a mouse event at the fake host' });
+  await waitFor(async () => (await stack.control.events('mouse')).length > 0, {
+    what: 'a mouse event at the fake host',
+  });
+  const events = await stack.control.events('mouse');
 
-  const down = events.find((e) => e.detail.mask === 1);
-  if (!down) throw new Error(`no button-down event in ${JSON.stringify(events)}`);
+  // RustDesk encodes mask = (button << 3) | type, with button 0x01 = left and
+  // type 1 = down, 2 = up (see RemoteScreen.tsx). A left press is therefore 9,
+  // not 1 — asserting 1 would be testing an assumption, not the app.
+  const MOUSE_LEFT_DOWN = 9;
+  const down = events.find((e) => e.detail.mask === MOUSE_LEFT_DOWN);
+  if (!down) throw new Error(`no left-button-down (mask ${MOUSE_LEFT_DOWN}) in ${JSON.stringify(events)}`);
   if (Math.abs(down.detail.x - clickX) > 2 || Math.abs(down.detail.y - clickY) > 2) {
     throw new Error(`click arrived at (${down.detail.x},${down.detail.y}), expected ~(${clickX},${clickY})`);
   }
@@ -392,17 +410,22 @@ scenario('typing arrives as key events', async ({ page, stack }) => {
   await page.connect({ id: stack.fakeHost.id, password: stack.fakeHost.password });
   await stack.control.waitForFrames(10);
 
-  const box = await waitFor(() => page.canvasBox(), { what: 'the canvas geometry' });
+  await waitFor(async () => (await page.canvasBox()) !== null, { what: 'the canvas geometry' });
+  const box = await page.canvasBox();
+
   // Focus the remote surface first: without focus the app ignores the keys.
   await page.clickAt(box.x + box.width / 2, box.y + box.height / 2);
-  await sleep(200);
+  // The click itself is a mouse event; let the focus land before clearing.
+  await waitFor(async () => (await stack.control.events('mouse')).length > 0, {
+    what: 'the focusing click to arrive',
+  });
   await stack.control.clearEvents();
   await page.type('ab');
 
-  const keys = await waitFor(async () => {
-    const k = await stack.control.events('key');
-    return k.length >= 2 ? k : 0;
-  }, { what: 'two key events at the fake host' });
+  await waitFor(async () => (await stack.control.events('key')).length >= 2, {
+    what: 'two key events at the fake host',
+  });
+  const keys = await stack.control.events('key');
 
   const unicodes = keys.map((k) => k.detail.unicode).filter((u) => typeof u === 'number');
   if (!unicodes.includes(97) || !unicodes.includes(98)) {
@@ -428,7 +451,6 @@ scenario('an unknown ID says the machine is offline', async ({ page, stack }) =>
 
   await waitFor(async () => (await page.text()).includes('That machine is offline'), {
     what: 'the friendly offline message',
-    timeoutMs: 40_000,
   });
 
   if (await page.hasCanvas()) throw new Error('a canvas appeared for an unknown ID');
@@ -459,11 +481,20 @@ async function main() {
       let page = null;
       try {
         page = await browser.newPage().then((p) => p.open());
-        await page.goto(stack.appUrl);
-        const detail = await fn({ page, stack });
-        const ms = Date.now() - started;
-        console.log(`  ✓ ${name}${detail ? ` — ${detail}` : ''} (${ms}ms)`);
-        results.push({ name, ok: true });
+        // The page load plus the scenario share one hard ceiling, so a stuck
+        // step cannot hold the browser past SCENARIO_TIMEOUT_MS.
+        await withDeadline(
+          (async () => {
+            await page.goto(stack.appUrl);
+            return fn({ page, stack });
+          })(),
+          SCENARIO_TIMEOUT_MS,
+          name,
+        ).then((detail) => {
+          const ms = Date.now() - started;
+          console.log(`  ✓ ${name}${detail ? ` — ${detail}` : ''} (${ms}ms)`);
+          results.push({ name, ok: true });
+        });
       } catch (e) {
         const ms = Date.now() - started;
         console.log(`  ✗ ${name} (${ms}ms)`);
