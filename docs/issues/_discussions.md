@@ -19,7 +19,7 @@ added by the project.
 
 **Honest status.** Video, input and audio work against a self-hosted relay, and
 that is still the path vouched for end to end. The public demo runs its **own**
-relay pair (hbbs+hbbr) on the DNS-only hostname `relay-demo.linkzy.dev`, because
+relay pair (hbbs+hbbr) on its own DNS-only relay hostname, because
 RustDesk's shared relay ports were refusing connections from its host. On
 **2026-11-21** the demo was verified end to end: a real RustDesk host on that
 relay was driven from the demo URL in a browser — login accepted, live H.264
@@ -28,7 +28,7 @@ from the browser reaching the machine. Audio was not exercised, because the
 headless host used for the test had no sound device.
 
 **To try the demo:** in RustDesk on the machine you want to control, set **ID
-Server** to `relay-demo.linkzy.dev` and paste the demo key shown on the demo page;
+Server** to the demo relay hostname shown on the demo page, and paste the demo key;
 leave Relay/API server blank. Then enter that machine's ID and password in the
 browser. A machine still pointing at RustDesk's public servers will not be found —
 they are separate networks. Evidence and key rotation:

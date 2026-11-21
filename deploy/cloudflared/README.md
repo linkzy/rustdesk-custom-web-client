@@ -1,58 +1,74 @@
-# rclient demo tunnel (Cloudflare)
+# A Cloudflare Tunnel for a demo instance
 
-The demo has its **own** Cloudflare tunnel, separate from the owner's tunnel that
-serves the rest of the host. Nothing in here is applied to the owner's tunnel, and
-the owner's tunnel is never restarted when the demo changes.
-
-| Item | Value |
-| --- | --- |
-| Tunnel name | `rclient-demo` |
-| Tunnel ID | `cc58c549-6980-404d-b653-9bc9d8ca4613` |
-| Config file on the VPS | `/etc/cloudflared/rclient-demo.yml` |
-| systemd unit | `rclient-demo-tunnel.service` |
-| Public hostname | `rclient-demo.linkzy.dev` |
-| Origin | `http://localhost:8090` (the demo `web` container) |
-
-Credentials live in `/root/.cloudflared/cc58c549-...json` (mode 400). They are
-secrets: never copy them into the repository, a message, or another machine.
+A template for giving a demo instance its own tunnel, so it shares nothing with
+whatever else you run on that machine. Everything here is a placeholder: replace
+the values, and keep your real IDs and paths out of the repository.
 
 ## Why a separate tunnel
 
-The owner's `/etc/cloudflared/config.yml` serves several unrelated services
-(medialib, immich, endurain, …). Editing and restarting that file would put all
-of them through a restart for a demo — and a mistake there would take the
-owner's sites down. A second tunnel with a single ingress rule is isolated: if the
-demo breaks, only the demo breaks.
+A tunnel is a single ingress: its config file is one list, and restarting the
+service restarts every hostname on it. If the demo shares a tunnel with real
+services, a demo change is a risk to all of them, and a demo crash is
+indistinguishable from a real outage. A second tunnel with one rule is isolated:
+if it breaks, only the demo breaks.
 
-## Adding/replacing the demo hostname
+## Creating it
 
 ```sh
-export TUNNEL_ORIGIN_CERT=/root/.cloudflared/cert.pem
-cloudflared tunnel route dns cc58c549-6980-404d-b653-9bc9d8ca4613 rclient-demo.linkzy.dev
+# once per machine, if you have not already
+cloudflared tunnel login
+
+cloudflared tunnel create rclient-demo        # prints a UUID
 ```
 
-That creates the proxied CNAME in Cloudflare to
-`cc58c549-6980-404d-b653-9bc9d8ca4613.cfargotunnel.com`.
-
-## Restarting only the demo tunnel
+Write its config as its own file, e.g. `/etc/cloudflared/rclient-demo.yml`, from
+[`rclient-demo.yml`](./rclient-demo.yml) — replacing the UUID and the credentials
+path. Then point DNS at it and run it as a service:
 
 ```sh
-systemctl restart rclient-demo-tunnel.service
-systemctl status  rclient-demo-tunnel.service --no-pager
+cloudflared tunnel route dns rclient-demo demo.example.com
+```
+
+Install the unit from [`rclient-demo-tunnel.service`](./rclient-demo-tunnel.service),
+adjusted to your user and paths, then:
+
+```sh
+sudo systemctl daemon-reload
+sudo systemctl enable --now rclient-demo-tunnel
+sudo systemctl status rclient-demo-tunnel --no-pager
+```
+
+## What is a secret here
+
+The tunnel's **credentials JSON** is a secret: whoever holds it can serve traffic
+as your tunnel. It belongs on the host only, in a directory no other user can read,
+and never in the repository, a message, or another machine. Its file name contains
+the tunnel UUID, which is why the template here uses a placeholder.
+
+The tunnel UUID on its own is not a credential, but treat it as private anyway: it
+identifies your tunnel, and publishing infrastructure identifiers is a habit with
+no upside.
+
+## Operating it
+
+```sh
+sudo systemctl restart rclient-demo-tunnel    # only this tunnel
 journalctl -u rclient-demo-tunnel -n 50 --no-pager
 ```
 
-Do **not** run `systemctl restart cloudflared` for demo work: that is the owner's
-tunnel and it serves production hostnames.
+Never restart the shared `cloudflared` service for demo work if other hostnames
+depend on it.
 
-## Removing the demo cleanly
+## Removing it
 
 ```sh
-systemctl disable --now rclient-demo-tunnel.service
-rm /etc/systemd/system/rclient-demo-tunnel.service
-systemctl daemon-reload
-export TUNNEL_ORIGIN_CERT=/root/.cloudflared/cert.pem
-cloudflared tunnel route dns delete rclient-demo.linkzy.dev   # optional: drop DNS
+sudo systemctl disable --now rclient-demo-tunnel
+sudo rm /etc/systemd/system/rclient-demo-tunnel.service
+sudo systemctl daemon-reload
+cloudflared tunnel route dns delete demo.example.com   # optional: drop the CNAME
 cloudflared tunnel delete rclient-demo
-cd /home/demo && docker compose down
 ```
+
+Then stop the demo's containers. Note that a DNS or CDN cache may keep serving the
+hostname for a while after that; verify against the origin rather than the public
+URL.

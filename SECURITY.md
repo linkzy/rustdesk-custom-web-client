@@ -93,10 +93,9 @@ RustDesk password does that.
 - No audit has been performed. No formal security review of the protocol code
   exists.
 - There is no guarantee about RustDesk's own servers or the relay you point it at.
-- The frontend adds no analytics of its own. The hosted instances at
-  `rclient.linkzy.dev` and `rclient-demo.linkzy.dev` are served through
-  Cloudflare, which injects its Web Analytics beacon into the page; a
-  self-hosted deployment does not get it from this repository.
+- The frontend adds no analytics of its own. If you host rclient behind
+  Cloudflare, its Web Analytics beacon may be injected into the page by the
+  deployment; a self-hosted deployment does not get it from this repository.
 
 ## Supported versions
 

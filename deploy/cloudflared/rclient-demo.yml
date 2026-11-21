@@ -1,18 +1,19 @@
-# rclient demo tunnel — separate from the owner's tunnel on this host.
+# Cloudflare Tunnel config for a demo instance — TEMPLATE.
 #
-# Deployed on the VPS as /etc/cloudflared/rclient-demo.yml.
-# Served by the systemd unit rclient-demo-tunnel.service.
+# Replace the placeholders, then save it outside the repository, e.g. as
+# /etc/cloudflared/rclient-demo.yml. Never commit the filled-in file: it names
+# your tunnel's credentials path, and the credentials themselves are a secret.
 #
-# Only the demo hostname is routed here. Every other hostname on this machine
-# stays on the owner's own tunnel and is not touched by this file.
+# This is a single-ingress config on purpose: a demo should never share a tunnel
+# with anything else you run.
 
-tunnel: cc58c549-6980-404d-b653-9bc9d8ca4613
-credentials-file: /root/.cloudflared/cc58c549-6980-404d-b653-9bc9d8ca4613.json
+tunnel: <YOUR-TUNNEL-UUID>
+credentials-file: /etc/cloudflared/<YOUR-TUNNEL-UUID>.json
 
 ingress:
-  - hostname: rclient-demo.linkzy.dev
-    service: http://localhost:8090
+  - hostname: demo.example.com
+    service: http://127.0.0.1:8090
     originRequest:
-      httpHostHeader: rclient-demo.linkzy.dev
-  # Everything else is a 404 — this tunnel deliberately exposes nothing else.
+      httpHostHeader: demo.example.com
+  # Anything unmatched must 404 rather than fall through to the demo.
   - service: http_status:404

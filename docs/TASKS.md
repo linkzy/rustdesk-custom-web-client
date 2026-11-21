@@ -29,8 +29,8 @@ internationalisation with English + pt-BR (R-21).
 KI-005 (keyboard case/layout). See `docs/KNOWN_ISSUES.md`.
 
 **Deployment:** `docker-compose.yml` (from source), `docker-compose.prod.yml`
-(published images), the public demo at <https://rclient-demo.linkzy.dev> on its
-own relay pair, and the demo's stability settings (memory caps and log rotation,
+(published images), a demo instance on its own relay pair (see `deploy/DEMO.md`),
+and the demo's stability settings (memory caps and log rotation,
 R-16/R-19 — partial: only the demo stack has them).
 
 ---

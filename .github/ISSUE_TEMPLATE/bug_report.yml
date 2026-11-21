@@ -90,7 +90,7 @@ body:
       options:
         - My own self-hosted relay
         - RustDesk public relay servers
-        - The public demo (rclient-demo.linkzy.dev)
+        - The public demo (demo.example.com)
         - Not sure
     validations:
       required: true
@@ -101,8 +101,7 @@ body:
       label: Which rclient instance
       options:
         - My own deployment
-        - The public demo (rclient-demo.linkzy.dev)
-        - The author's instance (rclient.linkzy.dev)
+        - The public demo (demo.example.com)
         - Running locally from source
     validations:
       required: true

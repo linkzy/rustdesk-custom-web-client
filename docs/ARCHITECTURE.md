@@ -323,24 +323,21 @@ docker compose -f docker-compose.prod.yml pull
 docker compose -f docker-compose.prod.yml up -d
 ```
 
-### There are two live instances
+### Deployments
 
-| Instance | What it is |
-|---|---|
-| `rclient.linkzy.dev` | The owner's private production instance, on its own VPS with its own relay. Not a public demo. |
-| `rclient-demo.linkzy.dev` | A **public demo** on a separate VPS, so visitors never reach the owner's relay (rule PROJ-003). It runs its **own** RustDesk relay pair (`hbbs`+`hbbr` as `rclient-demo-hbbs`/`rclient-demo-hbbr`), reachable at the DNS-only name `relay-demo.linkzy.dev` on ports 21115–21119. Visitors set **ID Server = `relay-demo.linkzy.dev`** and the demo's key in their RustDesk before connecting (see [`../deploy/DEMO.md`](../deploy/DEMO.md)); they can still point at their own relay under Advanced options instead. |
-
-The demo is deployed from `deploy/` (`docker-compose.demo.yml`,
-`demo.env.example`, `cloudflared/`) with its own compose project, network, tunnel
-and `.env`. Full runbook, host details, stability limits and the one operational
-caveat live in [`../deploy/DEMO.md`](../deploy/DEMO.md) — it is not repeated here.
+rclient is self-hosted, so there is no canonical instance: everyone runs their
+own. `deploy/` contains what you need to run a **demo** instance that is separate
+from your own deployment — its own compose project, network, relay pair, key,
+tunnel and `.env`. A generic recipe, including why each piece is separate, is in
+[`../deploy/DEMO.md`](../deploy/DEMO.md). Specific deployments are not documented
+in this repository.
 
 The caveat worth knowing as a developer: the gateway always sets
-`force_relay: true`, so a session cannot fall back to a direct connection. When
-the demo deployed, RustDesk's ID port (21118) answered but its relay ports
-(21117/21119) appeared unreachable from several vantage points. If a demo session
-connects and then waits for an image, check the relay path first. The demo's
-`.env` can point at a working relay without code changes.
+`force_relay: true`, so a session cannot fall back to a direct connection. If a
+session connects and then waits for an image, the relay path is the first suspect —
+check that the relay's ports (21117/21119) are reachable from both the gateway and
+the client. This is why a deployment that points at someone else's relay is a
+gamble: you can verify the ports, but not the server.
 
 ---
 

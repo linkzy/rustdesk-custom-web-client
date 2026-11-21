@@ -21,25 +21,29 @@ terminal. Audio is not included — that host has no sound device.
 
 > **Try it: [rclient-demo.linkzy.dev](https://rclient-demo.linkzy.dev)**
 >
-> The demo runs its own relay, so point your RustDesk at it first — only the
-> machine you want to control needs this, the browser side is already configured:
+> A demo instance runs there, separate from anyone's private deployment. It uses
+> its own relay, so point your RustDesk at that relay first — only the machine you
+> want to control needs this, the browser side is already configured:
 >
-> 1. RustDesk → **Network** (next to your ID) → **ID Server** =
->    `relay-demo.linkzy.dev`
-> 2. **Key** = the demo's public key, shown on the demo page
+> 1. RustDesk → **Network** (next to your ID) → **ID Server** = the demo relay
+>    hostname shown on the demo page.
+> 2. **Key** = the demo's public key, also shown on the demo page.
 > 3. Apply, wait for the status to go green, then enter your machine ID and
 >    password in the form.
 >
 > A machine still on RustDesk's public network will not be found — they are
 > separate relays. Anyone who already runs a RustDesk server can enter their own
-> under **Advanced options** instead.
+> under **Advanced options** instead, and never needs the demo's relay.
 >
-> ✅ **Verified end to end on 2026-11-21.** A real RustDesk host on the demo relay
-> was driven from this URL in a browser: login accepted, live video (H.264,
-> 1280×800, ~8 FPS, ~134 ms ping), and mouse and keyboard input from the browser
-> reaching the machine. Audio was not exercised (the test host had no sound
-> device). It is still a demo on one shared relay — see the limits and the
-> evidence in [`deploy/DEMO.md`](./deploy/DEMO.md).
+> ✅ **The demo has been verified end to end** — a real RustDesk host driven from a
+> browser through the public URL: login, live video, and keyboard and mouse input
+> arriving on the remote machine. It is still one shared relay on one small server,
+> so expect it to be slower than your own. What that verification did and did not
+> cover is in [`deploy/DEMO.md`](./deploy/DEMO.md).
+>
+> Running your own is the documented path: [`deploy/DEMO.md`](./deploy/DEMO.md) is a
+> generic recipe — its own relay, its own key, its own tunnel, nothing shared with
+> your real deployment.
 
 ---
 
@@ -219,11 +223,13 @@ You need *a* relay: your own, or a public one. Running your own is the point —
 lower latency, your data on your server. rclient ships no relay configuration.
 
 **Is the demo working?**
-Not proven end to end. The demo has its own relay now, verified at protocol level
-(ports, key enforcement, relay pairing), but nobody has run a real RustDesk host
-through it into a browser yet. It also needs two minutes of setup: set your
-RustDesk's **ID Server** to `relay-demo.linkzy.dev` and its **Key** to the one on
-the demo page. See [`deploy/DEMO.md`](./deploy/DEMO.md).
+Yes — verified end to end: a real RustDesk host, on the demo's own relay, driven
+from a browser through the public URL (login, live video, keyboard and mouse input
+arriving on the remote machine). It needs two minutes of setup from you first: set
+your RustDesk's **ID Server** to the demo relay hostname shown on the demo page, and
+its **Key** to the demo's public key. See [`deploy/DEMO.md`](./deploy/DEMO.md), which
+also covers what the verification did not include (audio, and load beyond a single
+visitor).
 
 **Where is the password stored?**
 Nowhere, unless you opt in with "Remember password" — then in your browser's
