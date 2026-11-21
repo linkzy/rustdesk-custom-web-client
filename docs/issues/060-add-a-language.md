@@ -8,15 +8,15 @@ one-line pull request — this issue is where that promise gets tested. Pick you
 own language; if you can review the result, even better.
 
 **Do.** Copy `web/src/i18n/en.ts` to `<tag>.ts` using the BCP 47 name
-`navigator.language` produces (`de`, `fr`, `zh-Hans`, `es-419`), translate the
-values and keep the keys and `{placeholders}` untouched. Register it with three
-one-line edits: `CATALOGUES` and `AVAILABLE_LOCALES` in `web/src/i18n/index.ts`,
-and `LABELS` in `web/src/components/LanguageSelect.tsx` (the language's own name,
-e.g. "Deutsch"). Full walkthrough: `docs/TRANSLATING.md`.
+`navigator.language` produces (`de`, `fr`, `zh-Hans`, `es-419`), rename the export
+and set `label` to the language's own name ("Deutsch"), then translate the values
+— keeping every key and `{placeholder}` untouched. Register it with **one** entry
+in `LOCALES` in `web/src/i18n/index.ts`. No component changes. Full walkthrough:
+`docs/TRANSLATING.md`.
 
-**Where.** `web/src/i18n/en.ts` (source), `web/src/i18n/index.ts` (`CATALOGUES`,
-`AVAILABLE_LOCALES`), `web/src/components/LanguageSelect.tsx` (`LABELS` — the
-language's own name). Those three lines are the whole integration.
+**Where.** New `web/src/i18n/<tag>.ts`, and one entry in `LOCALES` in
+`web/src/i18n/index.ts`. Those are the whole integration — if you find yourself
+editing a component, stop and say so in the PR.
 
 **Accept.** `npm test` passes — the parity test fails if any key is missing or
 extra, or a `{placeholder}` was renamed. `npm run lint`, `typecheck` and `build`

@@ -1,15 +1,36 @@
 import { describe, it, expect } from 'vitest';
 import {
   AVAILABLE_LOCALES,
+  LOCALES,
   LOCALE_STORAGE_KEY,
   catalogueFor,
   detectLocale,
+  localeLabel,
   pickLocale,
   readStoredLocale,
   translate,
   writeStoredLocale,
 } from './index';
 import { en } from './en';
+
+describe('locale registry', () => {
+  it('every registered locale has a catalogue and a name of its own', () => {
+    for (const { tag, catalogue, label } of LOCALES) {
+      expect(catalogue, `${tag} catalogue`).toBeTruthy();
+      expect(label.trim(), `${tag} label`).not.toBe('');
+      // A label is the language's endonym: it is shown untranslated in the
+      // picker, so it must never be a message key.
+      expect(label, `${tag} label`).not.toMatch(/^[a-z]+\.[a-zA-Z]/);
+    }
+    expect(AVAILABLE_LOCALES).toEqual(LOCALES.map((l) => l.tag));
+  });
+
+  it('localeLabel returns the registered name and falls back to the tag', () => {
+    expect(localeLabel('pt-BR')).toBe('Português (Brasil)');
+    expect(localeLabel('en')).toBe('English');
+    expect(localeLabel('xx-YY' as (typeof AVAILABLE_LOCALES)[number])).toBe('xx-YY');
+  });
+});
 
 describe('catalogues', () => {
   it('a translation cannot be missing a key the English catalogue has', () => {
@@ -87,9 +108,15 @@ describe('locale detection and storage', () => {
   it('matches the exact tag first, then the base language', () => {
     expect(pickLocale(['pt-BR'])).toBe('pt-BR');
     expect(pickLocale(['pt-PT'])).toBe('pt-BR'); // no pt-PT catalogue: falls back to pt
-    expect(pickLocale(['de-DE'])).toBe('en'); // unsupported language
     expect(pickLocale(['fr-CA', 'pt-BR'])).toBe('pt-BR'); // first match in preference order
     expect(pickLocale([])).toBe('en');
+  });
+
+  it('falls back to English for a language this build does not ship', () => {
+    // Derived, not hard-coded: adding a language must not break this test.
+    const unsupported = ['zz-ZZ', 'xx', 'qq-QQ'].find((tag) => !AVAILABLE_LOCALES.some((l) => l.split('-')[0] === tag.split('-')[0]));
+    expect(unsupported, 'pick a tag no catalogue covers').toBeTruthy();
+    expect(pickLocale([unsupported!])).toBe('en');
   });
 
   it('round-trips an explicit choice', () => {

@@ -57,8 +57,9 @@ describe('friendlyError', () => {
     for (const raw of titles) {
       const e = friendlyError(raw);
       for (const locale of AVAILABLE_LOCALES) {
-        expect(catalogueFor(locale)[e.title], `${locale} ${e.title}`).toBeTruthy();
-        expect(catalogueFor(locale)[e.hint], `${locale} ${e.hint}`).toBeTruthy();
+        const cat = catalogueFor(locale) as Record<string, string>;
+        expect(cat[e.title], `${locale} ${e.title}`).toBeTruthy();
+        expect(cat[e.hint], `${locale} ${e.hint}`).toBeTruthy();
       }
     }
   });

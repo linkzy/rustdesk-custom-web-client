@@ -1,4 +1,4 @@
-import type { Catalogue } from './en';
+import type { Catalogue } from './types';
 
 /**
  * Português (Brasil). Written by the project's maintainer — the catalogue the
@@ -87,3 +87,6 @@ export const ptBR: Catalogue = {
   'error.generic.hint':
     'O painel de depuração tem os detalhes técnicos. Verifique o ID da máquina, a senha e as configurações de relay.',
 };
+
+/** The language's own name, for the picker — never translated. */
+export const label = 'Português (Brasil)';
