@@ -32,6 +32,10 @@ export const ptBR: Catalogue = {
   'connect.connecting': 'Conectando…',
   'connect.connected': 'Conectado',
   'connect.disconnected': 'Desconectado',
+  'connect.reconnecting': 'Conexão perdida. Reconectando em {seconds}s (tentativa {attempt} de {max})…',
+  'connect.reconnectingAttempt': 'Conexão perdida. Reconectando (tentativa {attempt} de {max})…',
+  'connect.reconnectingOffline': 'Conexão perdida. Aguardando a rede voltar…',
+  'connect.cancelReconnect': 'Cancelar',
 
   'toolbar.label': 'Controles da sessão',
   'toolbar.fit': 'Ajustar',

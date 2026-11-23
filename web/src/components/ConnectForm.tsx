@@ -7,6 +7,7 @@ import {
   stagePasswordAttempt,
 } from '../utils/passwordStorage';
 import { friendlyError } from '../utils/errors';
+import type { ReconnectInfo } from '../hooks/useGateway';
 import {
   LS_ID_KEY,
   LS_HBBS_KEY,
@@ -43,8 +44,9 @@ declare global {
 interface ConnectFormProps {
   onConnect: (targetId: string, password: string, serverConfig?: ServerConfig, captchaToken?: string) => void;
   onDisconnect: () => void;
-  status: 'idle' | 'connecting' | 'connected' | 'error' | 'disconnected';
+  status: 'idle' | 'connecting' | 'connected' | 'error' | 'disconnected' | 'reconnecting';
   error: string | null;
+  reconnect: ReconnectInfo | null;
   showDebug: boolean;
   onShowDebugChange: (v: boolean) => void;
   theme: ThemePreference;
@@ -54,7 +56,7 @@ interface ConnectFormProps {
   t: TFunction;
 }
 
-export function ConnectForm({ onConnect, onDisconnect, status, error, showDebug, onShowDebugChange, theme, onThemeChange, locale, onLocaleChange, t }: ConnectFormProps) {
+export function ConnectForm({ onConnect, onDisconnect, status, error, reconnect, showDebug, onShowDebugChange, theme, onThemeChange, locale, onLocaleChange, t }: ConnectFormProps) {
   const [targetId, setTargetId]   = useState(() => localStorage.getItem(LS_ID_KEY)   ?? '');
   // The password is only read back from localStorage when the user opted in with
   // "Remember password"; the preference itself is remembered across visits.
@@ -146,7 +148,18 @@ export function ConnectForm({ onConnect, onDisconnect, status, error, showDebug,
   };
 
   const isConnected  = status === 'connected';
-  const isConnecting = status === 'connecting';
+  const isReconnecting = status === 'reconnecting';
+  const isConnecting = status === 'connecting' || isReconnecting;
+
+  // Re-render once a second while a retry is pending so the countdown moves.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!isReconnecting) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [isReconnecting]);
+  const secondsLeft = reconnect?.nextAt != null ? Math.max(0, Math.ceil((reconnect.nextAt - now) / 1000)) : 0;
+
   const captchaRequired = gwConfig?.captchaEnabled && !captchaToken;
   const connectDisabled = isConnecting || !targetId.trim() || !!captchaRequired;
   // The raw error stays in the Debug Panel; the form gets a short sentence and a
@@ -276,18 +289,33 @@ export function ConnectForm({ onConnect, onDisconnect, status, error, showDebug,
             <div id="hcaptcha-widget" className={styles.captchaWidget} />
           )}
 
-          <button
-            className={styles.button}
-            type="submit"
-            disabled={connectDisabled}
-            aria-busy={isConnecting}
-          >
-            {isConnecting ? (
-              <><span className={styles.spinner} aria-hidden="true" /> {t('connect.connecting')}</>
-            ) : (
-              t('connect.connect')
-            )}
-          </button>
+          {isReconnecting && reconnect && (
+            <div className={styles.statusBadge} data-status="reconnecting" role="status" aria-live="polite">
+              {reconnect.offline
+                ? t('connect.reconnectingOffline')
+                : reconnect.nextAt == null
+                  ? t('connect.reconnectingAttempt', { attempt: reconnect.attempt, max: reconnect.max })
+                  : t('connect.reconnecting', { seconds: secondsLeft, attempt: reconnect.attempt, max: reconnect.max })}
+            </div>
+          )}
+          {isReconnecting ? (
+            <button className={styles.button} type="button" onClick={onDisconnect}>
+              {t('connect.cancelReconnect')}
+            </button>
+          ) : (
+            <button
+              className={styles.button}
+              type="submit"
+              disabled={connectDisabled}
+              aria-busy={isConnecting}
+            >
+              {isConnecting ? (
+                <><span className={styles.spinner} aria-hidden="true" /> {t('connect.connecting')}</>
+              ) : (
+                t('connect.connect')
+              )}
+            </button>
+          )}
           {(status === 'error' || status === 'disconnected') && (
             <div
               className={styles.statusBadge}
