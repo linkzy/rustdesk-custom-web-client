@@ -81,9 +81,27 @@ export function buildKeyPayload(msg: {
   // Skip non-printable keys (Dead, Process, Unidentified, etc.)
   if (msg.key.length !== 1) return null;
 
-  // For Ctrl/Alt keyboard shortcuts (e.g. Ctrl+C, Alt+F4), send chr with the
-  // browser keyCode which maps to Windows VK codes (C=67, V=86, etc.).
-  // This lets the host fire the correct shortcut action.
+  // For Ctrl/Alt shortcuts (Ctrl+C, Ctrl+V, Ctrl+A, Alt+F4 as a letter, …) the
+  // host needs the CHARACTER code, not the keyboard position and not the
+  // virtual-key code.
+  //
+  // Evidence — upstream rustdesk/src/server/input_service.rs (master), Legacy
+  // mode, which is what we send (mode: 0):
+  //   legacy_keyboard_mode: Some(Union::Chr(chr)) => process_chr(en, chr, down, has_hotkey_modifiers(evt))
+  //   process_chr:          let key = char_value_to_key(chr);   // = Key::Layout(char)
+  //   char_value_to_key:    Key::Layout(std::char::from_u32(value).unwrap_or('\0'))
+  // so `chr` is read as a Unicode scalar. The value that produces `vk_to_scancode`
+  // (`translate_process_code`, `code >> 16`) is only reachable from Translate mode,
+  // never from Legacy — so a Windows VK in `chr` is not what this field means.
+  //
+  // What we used to send was the browser `keyCode`, which is the uppercase
+  // virtual-key value: Ctrl+C sent 67, i.e. the character "C", while the user
+  // pressed "c" (99). That is why shortcuts did nothing useful on the host.
+  //
+  // `msg.key` is already the character the user typed, layout- and case-aware
+  // ('c' for Ctrl+C, 'C' for Ctrl+Shift+C, '/' for Ctrl+/), so its code point is
+  // exactly what the host wants. Fall back to keyCode only when the browser did
+  // not give us a single character.
   const isShortcut = modifiers.some(
     (m) => m === MODIFIER_MAP['ctrl'] || m === MODIFIER_MAP['alt'],
   );
@@ -91,7 +109,7 @@ export function buildKeyPayload(msg: {
     return {
       key_event: {
         down: msg.down,
-        chr: msg.keyCode,
+        chr: msg.key.charCodeAt(0),
         modifiers,
         mode: 0,
       },

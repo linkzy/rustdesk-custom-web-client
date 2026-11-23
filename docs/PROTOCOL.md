@@ -418,6 +418,14 @@ message KeyEvent {
 }
 ```
 
+Note on `chr`: the comment above says "position scan code", which describes
+**Map** mode. In **Legacy** mode (what we send) upstream treats the value as a
+character: `legacy_keyboard_mode` → `process_chr` → `char_value_to_key` →
+`Key::Layout(char)`. The scancode conversion (`translate_process_code`,
+`code >> 16` → `vk_to_scancode`) is only reachable in Translate mode. So a
+Ctrl+letter shortcut sends the code point of the letter, not its virtual key.
+See [`docs/SHORTCUTS.md`](./SHORTCUTS.md) for the evidence.
+
 Key `ControlKey` enum values (from `gateway/src/proto/message.proto` — note `Unknown=0`, so values start at 1):
 ```
 Alt=1, Backspace=2, CapsLock=3, Control=4, Delete=5, DownArrow=6,
@@ -432,7 +440,7 @@ RightArrow=28, Shift=29, Space=30, Tab=31, UpArrow=32
 |---|---|
 | Named/control keys (arrows, Enter, Tab, F1–F12, …) | `control_key` + `modifiers`, `mode: 0` |
 | Printable characters, no Ctrl/Alt | `unicode` = `key.charCodeAt(0)`, sent on **keydown only** |
-| Printable characters with Ctrl or Alt | `chr` = browser `keyCode` (Windows virtual-key code), down and up |
+| Printable characters with Ctrl or Alt | `chr` = code point of the typed character (`c` → 99, `C` → 67), down and up | 
 | Dead / Unidentified / multi-character keys | nothing (payload is `null`, the gateway skips it) |
 
 Modifiers map `ctrl→4`, `alt→1`, `shift→29`, `meta→23`.

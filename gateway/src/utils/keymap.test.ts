@@ -66,7 +66,12 @@ describe('buildKeyPayload — printable characters', () => {
     expect(buildKeyPayload({ down: false, key: 'a', keyCode: 65 })).toBeNull();
   });
 
-  it('sends Ctrl+<letter> as chr=keyCode (Windows VK), not unicode', () => {
+  it('sends Ctrl+<letter> as the CHARACTER code, not the Windows VK code', () => {
+    // Upstream evidence (rustdesk/src/server/input_service.rs, master):
+    //   legacy_keyboard_mode: Union::Chr(chr) => process_chr(en, chr, down, hotkey)
+    //   process_chr:          let key = char_value_to_key(chr)  // Key::Layout(char)
+    // So `chr` is a character code. For Ctrl+C the character is 'c' (99), not the
+    // Windows virtual-key 67 — 67 would mean the character "C".
     for (const mod of ['ctrl', 'alt']) {
       const payload = buildKeyPayload({
         down: true,
@@ -74,9 +79,32 @@ describe('buildKeyPayload — printable characters', () => {
         keyCode: 67,
         modifiers: [mod],
       });
-      expect(payload?.key_event.chr).toBe(67);
+      expect(payload?.key_event.chr).toBe('c'.codePointAt(0));
       expect(payload?.key_event).not.toHaveProperty('unicode');
+      expect(payload?.key_event.mode).toBe(0); // Legacy, which is what upstream compares
     }
+  });
+
+  it('keeps Ctrl+Shift+<letter> uppercase (the character actually typed)', () => {
+    // With Shift held the browser reports key: 'C'. The character code is then
+    // 67 ("C"), which is correct — it is a different shortcut from Ctrl+C.
+    const payload = buildKeyPayload({
+      down: true,
+      key: 'C',
+      keyCode: 67,
+      modifiers: ['ctrl', 'shift'],
+    });
+    expect(payload?.key_event.chr).toBe('C'.codePointAt(0));
+  });
+
+  it('sends a non-letter shortcut as its character (Ctrl+/)', () => {
+    const payload = buildKeyPayload({
+      down: true,
+      key: '/',
+      keyCode: 191,
+      modifiers: ['ctrl'],
+    });
+    expect(payload?.key_event.chr).toBe('/'.codePointAt(0));
   });
 
   it('does not treat Shift as a shortcut modifier', () => {

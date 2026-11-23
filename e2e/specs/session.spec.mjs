@@ -98,4 +98,40 @@ test.describe('a real session', () => {
       return unicodes.includes(97) && unicodes.includes(98);
     }, { message: "keys 'a' and 'b' should arrive as unicode 97 and 98" }).toBe(true);
   });
+
+  test('a Ctrl shortcut arrives with ctrl and the character code', async ({ page, stack }) => {
+    // KI-006: Ctrl+C etc. used to send `chr` = the browser keyCode (67 = the
+    // CHARACTER "C") while the user pressed "c". Upstream's Legacy-mode
+    // process_chr reads `chr` as a Unicode scalar, so the host was asked to press
+    // the wrong key. This asserts the payload a host actually needs.
+    await connect(page, { id: stack.fakeHost.id, password: stack.fakeHost.password });
+    await expect(page.locator('canvas')).toBeVisible({ timeout: 30_000 });
+    await stack.control.waitForFrames(10);
+
+    const box = await canvasGeometry(page);
+    await clickCanvasPoint(page, Math.round(box.pw / 2), Math.round(box.ph / 2));
+    await expect.poll(async () => (await stack.control.events('mouse')).length > 0, {
+      message: 'the focusing click should reach the host first',
+    }).toBe(true);
+
+    await stack.control.clearEvents();
+    await page.keyboard.press('Control+c');
+
+    await expect.poll(async () => (await stack.control.events('key')).length > 0, {
+      message: 'Ctrl+C should produce a key event',
+    }).toBe(true);
+
+    const keyEvents = await stack.control.events('key');
+    // The Ctrl key press/release is itself a key event carrying modifier 4, so
+    // select on the union field instead: the letter is the event with `chr`.
+    const down = keyEvents
+      .find((e) => e.detail.down === true && typeof e.detail.chr === 'number');
+
+    expect(down, `no character key-down event: ${JSON.stringify(keyEvents)}`).toBeTruthy();
+    expect(down.detail.modifiers).toContain(4);
+
+    // The character the user typed: 'c' is 99, not the virtual-key 67.
+    expect(down.detail.chr).toBe('c'.codePointAt(0));
+    expect(down.detail).not.toHaveProperty('unicode');
+  });
 });

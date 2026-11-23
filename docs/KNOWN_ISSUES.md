@@ -153,23 +153,65 @@ Control keys (arrows, Enter, Tab, etc.) keep using `control_key`.
 
 ## KI-006 — Common Keyboard Shortcuts Not Working (Ctrl+C, Ctrl+V, etc.)
 
-**Status:** Open  
+**Status:** Open (encoding fixed; two parts remain, see "What is left")  
 **Severity:** Medium — copy/paste and common shortcuts don't work  
-**Affected component:** `gateway/src/utils/keymap.ts`, `web/src/components/RemoteScreen.tsx`
+**Affected component:** `gateway/src/utils/keymap.ts`, `web/src/components/RemoteScreen.tsx`  
+**Detail:** [`docs/SHORTCUTS.md`](./SHORTCUTS.md) — measured matrix, encoding evidence, and what is still unproven
 
 ### Symptoms
-- Pressing Ctrl+C, Ctrl+V, Ctrl+A, Ctrl+Z, and similar shortcuts in the remote screen does nothing (or triggers the browser's own action instead of reaching the remote machine)
-- Text cannot be copied from or pasted into the remote session using standard shortcuts
+- Pressing Ctrl+C, Ctrl+V, Ctrl+A, Ctrl+Z and similar shortcuts in the remote screen does nothing
+- Text cannot be copied from or pasted into the remote session with standard shortcuts
 
-### Likely Root Cause
-Browser keyboard events for common shortcuts are often consumed by the browser before the page sees them, and copy/paste additionally needs the clipboard channel (R-10, not implemented). For the shortcuts that do reach the page, `buildKeyPayload` (`gateway/src/utils/keymap.ts`) already sends Ctrl/Alt combinations as `chr` + `keyCode`, so the remaining gap is the browser side and clipboard support rather than the encoding itself.
+### What was wrong (fixed)
 
-### Next Steps
-- Confirm in a browser which shortcuts actually reach the listener (the canvas calls `preventDefault()` on keydown/keyup)
-- Capture the raw `KeyboardEvent` and the resulting `KeyEvent` payload for Ctrl+C on the remote host
-- Clipboard sync (R-10) is a prerequisite for real copy/paste; the shortcut forwarding can be checked separately
-- Remember the verbose keystroke log in `gateway/src/server.ts` is commented out (R-15) — restore it temporarily when debugging this
+Two independent problems, previously blurred together.
+
+**Encoding.** `buildKeyPayload` sent Ctrl/Alt+character as `chr = keyCode`, the
+browser's virtual-key value — Ctrl+C sent **67**, which is the character `C`.
+Upstream RustDesk's Legacy path (`src/server/input_service.rs`:
+`legacy_keyboard_mode` → `process_chr` → `char_value_to_key` →
+`Key::Layout(char)`) reads `chr` as a **character code**, so the host was asked
+to press `C` while the user pressed `c` (99). The `vk_to_scancode` path
+(`translate_process_code`, `code >> 16`) is only reachable in `Translate` mode,
+never in the `Legacy` mode we send.
+
+Now `chr` is the code point of `msg.key` — the character the user actually
+typed, layout- and case-aware (`c` → 99, `C` with Shift → 67, `/` → 47). Unit
+tests fail if the old behaviour returns, and an e2e test asserts Ctrl+C produces
+`chr=99` with `ctrl` in `modifiers`.
+
+**Normal typing is unaffected:** KI-005 (unicode field, keydown-only) still holds,
+covered by the same tests.
+
+### What is left
+
+1. **Browser-reserved shortcuts cannot be recovered.** Ctrl+W, Ctrl+T, Ctrl+N,
+   Ctrl+Shift+T/N, Ctrl+Tab and the OS-level Alt+Tab / Alt+F4 / Meta+L /
+   Ctrl+Alt+Delete are handled by the browser chrome or the window manager. A
+   page can only receive them if the browser chooses to hand them over. The app
+   does call `preventDefault()` on everything it receives (measured: 30/30), but
+   that cannot reach events the browser never dispatches. Which of these a real
+   keyboard actually delivers is **unmeasured** — Playwright's CDP key injection
+   bypasses the browser UI layer, so it cannot answer that question. Confirming
+   it needs a human pressing keys in a real window.
+2. **Clipboard content still needs the clipboard channel (R-10).** Even with the
+   keystroke correct, Ctrl+C can only tell the host to copy *its* selection. Moving
+   text between the browser and the remote machine needs a clipboard channel that
+   is not implemented.
+
+### Not proven without a real host
+
+The fake host records what we send; it does not run a Windows input layer. So it
+is proven that we now send `chr=99` + Ctrl for Ctrl+C, and that ordinary typing is
+unchanged. It is **not** proven that a Windows application acts on it. That needs
+a session against a real RustDesk host.
+
+### Next steps
+- Confirm the remaining shortcuts against a real host (one session is enough)
+- Clipboard sync (R-10) is a prerequisite for real copy/paste
+- The verbose keystroke log in `gateway/src/server.ts` is commented out (R-15) —
+  restore it temporarily when debugging; do not commit it back on
 
 ---
 
-*Last updated: 2026-11-19*
+*Last updated: 2026-11-23*
