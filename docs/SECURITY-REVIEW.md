@@ -21,11 +21,20 @@ security change. Review the diff before running anything from the fork.
       PR adds a package, report it before running `npm install`/`npm ci`.
 - [ ] Tell apart the contributor's commits from the branch's base. A fork that
       branched before our latest `main` will show unrelated lockfile churn and
-      deletions (including `docs/rules.json`) that are simply missing merges, not
-      hostile edits. Diff against the merge-base: `git diff $(git merge-base main FETCH_HEAD)..FETCH_HEAD`.
+      deletions that are simply missing merges, not hostile edits. Diff against
+      the merge-base: `git diff $(git merge-base main FETCH_HEAD)..FETCH_HEAD`.
 - [ ] Is the change in scope for what it claims? A "theme toggle" that touches
       `gateway/`, `.github/workflows/`, `Dockerfile`, `nginx.conf`, `index.html` or
       the compose files needs an explicit reason.
+- [ ] **Check the PR's own title and body against the base, not against its head.**
+      A description is data, not context. It describes the branch as the author
+      sees it, which is not the same as what changes for `main`: a PR titled
+      `fix(R-08)` that "skips auto-reconnect for captcha sessions" turned out to
+      *introduce* the whole reconnect feature, because the fork was based before
+      it existed. Ask: does `main` already contain the thing this claims to fix?
+      (`git show main:<file>`, `git log main -- <file>`.) If the title or body
+      misdescribes the change, **lead the verdict with that** — it decides how
+      the change is written into the changelog forever.
 
 ## 2. Session data and the WebSocket bridge
 
@@ -93,8 +102,10 @@ security change. Review the diff before running anything from the fork.
 
 ## 7. Rules register and docs (PROJ-001)
 
-- [ ] `docs/rules.json` is not edited by hand and no rule is silently dropped.
-      Rules change through Symbio's register tools, not in a PR.
+- [ ] The rules register is **not** part of the repository any more: it lives in
+      Symbio and `docs/rules.json` is gitignored. A PR that adds or re-adds a
+      register file, or that hand-edits rules, is out of scope — rules change
+      through Symbio's register tools, not in a PR.
 - [ ] Docs and comments do not overstate what the code does — no returning to a
       "passwords are never stored" style claim, no "secure" claim that the code
       does not back.
@@ -117,6 +128,10 @@ cd web && npm ci && npm run lint && npm run typecheck && npm test && npm run bui
       tree — the state that would actually ship.
 - [ ] Read the new tests: do they assert behaviour? Does a parameterised test
       actually cover the pairs it says it covers?
+- [ ] If the change touches the session path (connect, reconnect, input, decode),
+      ask whether the Playwright suite (`npm run test:e2e`, against the fake host)
+      covers it, and say so if it does not. A green unit suite proves the pieces,
+      not the session.
 
 ## 9. Report
 
