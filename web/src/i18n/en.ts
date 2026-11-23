@@ -32,6 +32,10 @@ export const en = {
   'connect.connecting': 'Connecting…',
   'connect.connected': 'Connected',
   'connect.disconnected': 'Disconnected',
+  'connect.reconnecting': 'Connection lost. Reconnecting in {seconds}s (attempt {attempt} of {max})…',
+  'connect.reconnectingAttempt': 'Connection lost. Reconnecting (attempt {attempt} of {max})…',
+  'connect.reconnectingOffline': 'Connection lost. Waiting for the network to come back…',
+  'connect.cancelReconnect': 'Cancel',
 
   // Session toolbar
   'toolbar.label': 'Session controls',
