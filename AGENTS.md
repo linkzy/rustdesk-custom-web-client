@@ -77,6 +77,7 @@ Read [`docs/AI_GUIDELINES.md`](./docs/AI_GUIDELINES.md) before touching `gateway
 | Need | File |
 |---|---|
 | Every doc, and what to read for what | [`docs/README.md`](./docs/README.md) |
+| What a term means (and what not to call it) | [`docs/glossary.md`](./docs/glossary.md) |
 | Local setup without Docker | [`docs/DEVELOPMENT.md`](./docs/DEVELOPMENT.md) |
 | Self-hosting (relay, HTTPS, troubleshooting) | [`docs/DEPLOYMENT.md`](./docs/DEPLOYMENT.md) |
 | Cutting a release | [`docs/RELEASING.md`](./docs/RELEASING.md) |

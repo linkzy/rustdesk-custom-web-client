@@ -18,6 +18,7 @@ fresh context.)
 | **Know what is finished** | [`TASKS.md`](./TASKS.md) — milestone roadmap; [`issues/`](./issues/) has the ready-to-paste issues |
 | **Check a bug I hit** | [`KNOWN_ISSUES.md`](./KNOWN_ISSUES.md) — confirmed bugs, root causes, fixed ones included |
 | **Ship a release** | [`RELEASING.md`](./RELEASING.md) — bump the manifests, changelog, tag, image tags, GitHub Release |
+| **Know what a word means here** | [`glossary.md`](./glossary.md) — one word per thing: components, protocol terms, and the words not to use |
 | **Point an AI agent at the repo** | [`../AGENTS.md`](../AGENTS.md) |
 | **Run the public demo** | [`../deploy/DEMO.md`](../deploy/DEMO.md) — its host, tunnel, redeploy and limits |
 
