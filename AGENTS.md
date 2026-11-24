@@ -23,7 +23,7 @@ The RustDesk relay itself is **not** in this repo.
 ```bash
 # from the repo root (its only dependency is @playwright/test, for the e2e suite)
 npm run install:all   # npm ci in gateway/ then web/
-npm test              # vitest in both (currently 50 gateway + 97 web)
+npm test              # vitest in both (currently 52 gateway + 108 web)
 npm run typecheck     # tsc in both
 npm run lint          # eslint in both
 npm run build         # both

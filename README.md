@@ -239,7 +239,7 @@ Nowhere, unless you opt in with "Remember password" — then in your browser's
 It did not work well with self-hosted relays; that is why this exists.
 
 **Is it tested?**
-Yes. The full suite in both packages (currently 50 gateway tests and 97 web),
+Yes. The full suite in both packages (currently 52 gateway tests and 108 web),
 plus lint, typecheck and a production build, runs on every pull request in
 [CI](https://github.com/linkzy/rustdesk-custom-web-client/actions/workflows/ci.yml),
 and there are end-to-end tests against the fake host. The unit tests pin the pure
