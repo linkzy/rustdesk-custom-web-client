@@ -1,5 +1,6 @@
 import nacl from 'tweetnacl';
 import WebSocket from 'ws';
+import { randomBytes } from 'crypto';
 import { loadProtos, encodeMessage, decodeMessage } from './utils/proto';
 import { hashPassword, makeNonce, SeqCounter } from './utils/crypto';
 import {
@@ -12,6 +13,7 @@ import {
 } from './utils/frames';
 import { performRendezvous } from './rendezvous';
 import { connectRelay, RelayConnection } from './relay';
+import { log as writeLog, type LogLevel } from './utils/log';
 import type * as protobuf from 'protobufjs';
 
 export interface ServerConfig {
@@ -38,11 +40,17 @@ export class Session {
   private remoteWidth = 0;
   private remoteHeight = 0;
   private targetId = '';
+  // Short id (4 hex chars) that tags every log line for this connection
+  readonly id = randomBytes(2).toString('hex');
 
   // Gateway-side frame rate tracking
   private gwFrameCount = 0;
   private gwFpsWindowStart = 0;
   private gwStatsInterval: ReturnType<typeof setInterval> | null = null;
+
+  private log(level: LogLevel, msg: string): void {
+    writeLog(level, msg, { session: this.id });
+  }
 
   constructor(options: SessionOptions) {
     this.options = options;
@@ -55,12 +63,12 @@ export class Session {
     this.targetId = this.options.targetId.replace(/\s+/g, '');
     const targetId = this.targetId;
 
-    console.log(`[session] Starting rendezvous for peer: ${targetId}`);
-    const { relayServer, uuid } = await performRendezvous(targetId, 1, this.options.serverConfig);
-    console.log(`[session] Rendezvous done. Relay: ${relayServer}, uuid: ${uuid}`);
+    this.log('INFO', `[session] Starting rendezvous for peer: ${targetId}`);
+    const { relayServer, uuid } = await performRendezvous(targetId, 1, this.options.serverConfig, this.id);
+    this.log('INFO', `[session] Rendezvous done. Relay: ${relayServer}, uuid: ${uuid}`);
 
-    this.relay = await connectRelay(targetId, relayServer, uuid, this.options.serverConfig);
-    console.log('[session] Relay connected. Waiting for handshake...');
+    this.relay = await connectRelay(targetId, relayServer, uuid, this.options.serverConfig, this.id);
+    this.log('INFO', '[session] Relay connected. Waiting for handshake...');
 
     this.gwFpsWindowStart = Date.now();
     this.gwStatsInterval = setInterval(() => this.reportGwStats(), 1000);
@@ -76,7 +84,7 @@ export class Session {
   private reportGwStats(): void {
     const elapsedSec = (Date.now() - this.gwFpsWindowStart) / 1000;
     const gwFps = elapsedSec > 0 ? Math.round((this.gwFrameCount / elapsedSec) * 10) / 10 : 0;
-    console.log(`[session] GW FPS: ${gwFps} (frames=${this.gwFrameCount}, acks_sent=${this.acksSent})`);
+    this.log('INFO', `[session] GW FPS: ${gwFps} (frames=${this.gwFrameCount}, acks_sent=${this.acksSent})`);
     this.gwFrameCount = 0;
     this.acksSent = 0;
     this.gwFpsWindowStart = Date.now();
@@ -92,7 +100,7 @@ export class Session {
         const nonce = makeNonce(this.recvSeq.next());
         const decrypted = nacl.secretbox.open(bytes, nonce, this.symmetricKey);
         if (!decrypted) {
-          console.error('[session] Failed to decrypt message (seq=' + this.recvSeq.value + ')');
+          this.log('ERROR', `[session] Failed to decrypt message (seq=${this.recvSeq.value})`);
           return;
         }
         bytes = decrypted;
@@ -124,21 +132,21 @@ export class Session {
         // FPS adaptation — without this, FPS stays at minimum.
         if (!msg.test_delay.from_client) {
           const tb = Number(msg.test_delay.target_bitrate) || 0;
-          if (tb) console.log(`[session] test_delay from host: target_bitrate=${tb}`);
+          if (tb) this.log('INFO', `[session] test_delay from host: target_bitrate=${tb}`);
           const echoTime = Number(msg.test_delay.time) || 0;
           this.sendMessage({ test_delay: { time: echoTime, from_client: false, last_delay: 0 } });
         }
       } else {
         const fields = Object.keys(msg).filter(k => msg[k] !== null && msg[k] !== undefined && msg[k] !== false && msg[k] !== 0 && msg[k] !== '');
-        if (fields.length) console.log('[session] Unhandled message fields:', fields);
+        if (fields.length) this.log('INFO', `[session] Unhandled message fields: ${fields.join(', ')}`);
       }
     } catch (e) {
-      console.error('[session] Error handling relay message:', e);
+      this.log('ERROR', `[session] Error handling relay message: ${e}`);
     }
   }
 
   private handleHash(hash: { salt: any; challenge: any }): void {
-    console.log('[session] Received Hash challenge');
+    this.log('INFO', '[session] Received Hash challenge');
 
     // salt and challenge are bytes fields — protobufjs returns them as binary strings
     // (each char code = byte value). Use 'binary' encoding, NOT 'base64'.
@@ -151,7 +159,7 @@ export class Session {
 
     const salt      = toBuffer(hash.salt);
     const challenge = toBuffer(hash.challenge);
-    console.log(`[session] Hash: salt=${salt.toString('hex')} challenge=${challenge.toString('hex')}`);
+    this.log('INFO', `[session] Hash: salt=${salt.toString('hex')} challenge=${challenge.toString('hex')}`);
 
     const passwordBytes = hashPassword(salt, challenge, this.options.password);
 
@@ -182,12 +190,12 @@ export class Session {
     };
 
     this.sendMessage(loginRequest);
-    console.log('[session] Sent LoginRequest');
+    this.log('INFO', '[session] Sent LoginRequest');
   }
 
   private handleLoginResponse(resp: { error?: string; peer_info?: any }): void {
     if (resp.error) {
-      console.error('[session] Login failed:', resp.error);
+      this.log('ERROR', `[session] Login failed: ${resp.error}`);
       this.sendBrowserJson({ type: 'error', message: resp.error });
       this.relay?.close();
       return;
@@ -195,7 +203,7 @@ export class Session {
     if (resp.peer_info) {
       this.handlePeerInfo(resp.peer_info);
     }
-    console.log('[session] Login successful');
+    this.log('INFO', '[session] Login successful');
   }
 
   private handlePeerInfo(peerInfo: any): void {
@@ -204,7 +212,7 @@ export class Session {
       this.remoteWidth = displays[0].width ?? 1920;
       this.remoteHeight = displays[0].height ?? 1080;
     }
-    console.log(`[session] PeerInfo: ${this.remoteWidth}x${this.remoteHeight}`);
+    this.log('INFO', `[session] PeerInfo: ${this.remoteWidth}x${this.remoteHeight}`);
     this.sendBrowserJson({
       type: 'connected',
       width: this.remoteWidth,
@@ -229,7 +237,7 @@ export class Session {
       },
     });
 
-    console.log('[session] Sent video_received + refresh_video + option(fps=30)');
+    this.log('INFO', '[session] Sent video_received + refresh_video + option(fps=30)');
   }
 
   private handleMisc(misc: any): void {
@@ -237,7 +245,7 @@ export class Session {
     // service is subscribed. Forward it so the browser can configure its decoder.
     if (misc.audio_format) {
       const fmt = misc.audio_format;
-      console.log(`[session] Host audio_format: ${fmt.sample_rate} Hz, ${fmt.channels} ch`);
+      this.log('INFO', `[session] Host audio_format: ${fmt.sample_rate} Hz, ${fmt.channels} ch`);
       this.sendBrowserJson({
         type: 'audio_format',
         sampleRate: Number(fmt.sample_rate) || 0,
@@ -250,24 +258,24 @@ export class Session {
       .filter(([, v]) => v !== null && v !== undefined && v !== false && v !== 0 && v !== '')
       .map(([k, v]) => `${k}=${JSON.stringify(v)}`);
     if (active.length) {
-      console.log('[session] Misc from host:', active.join(', '));
+      this.log('INFO', `[session] Misc from host: ${active.join(', ')}`);
       this.sendBrowserJson({ type: 'log', message: `host misc: ${active.join(', ')}` });
     }
 
     // If the host tells us its current FPS target, surface it
     if (misc.auto_adjust_fps !== undefined && misc.auto_adjust_fps !== 0) {
-      console.log(`[session] Host auto_adjust_fps = ${misc.auto_adjust_fps}`);
+      this.log('INFO', `[session] Host auto_adjust_fps = ${misc.auto_adjust_fps}`);
     }
 
     // Host closed the session
     if (misc.close_reason) {
-      console.warn('[session] Host closed session:', misc.close_reason);
+      this.log('WARN', `[session] Host closed session: ${misc.close_reason}`);
       this.sendBrowserJson({ type: 'error', message: `Host closed: ${misc.close_reason}` });
     }
   }
 
   private handleSignedId(signedId: { id?: any }): void {
-    console.log('[session] Received SignedId — performing secure handshake');
+    this.log('INFO', '[session] Received SignedId — performing secure handshake');
     try {
       // protobufjs bytes → Uint8Array helper
       const toBytes = (v: any): Uint8Array => {
@@ -279,7 +287,7 @@ export class Session {
       };
 
       const idBytes = toBytes(signedId.id);
-      console.log(`[session] SignedId.id length: ${idBytes.length} bytes`);
+      this.log('INFO', `[session] SignedId.id length: ${idBytes.length} bytes`);
 
       // signed_id.id = Ed25519 signature (64 bytes) + IdPk protobuf { id, pk }
       // Skip the 64-byte signature and parse IdPk to get the peer's Curve25519 public key.
@@ -291,7 +299,7 @@ export class Session {
       const IdPk = this.root!.lookupType('IdPk');
       const idPk = IdPk.decode(idPkBytes) as any;
       const peerPk = toBytes(idPk.pk);
-      console.log(`[session] Peer Curve25519 pk: ${peerPk.length} bytes (id=${idPk.id})`);
+      this.log('INFO', `[session] Peer Curve25519 pk: ${peerPk.length} bytes (id=${idPk.id})`);
 
       if (peerPk.length !== 32) {
         throw new Error(`Expected 32-byte peer pk, got ${peerPk.length}`);
@@ -317,9 +325,9 @@ export class Session {
       this.symmetricKey = symKey;
       this.recvSeq.reset();
       this.sendSeq.reset();
-      console.log('[session] Sent PublicKey with symmetric key. Session encryption active.');
+      this.log('INFO', '[session] Sent PublicKey with symmetric key. Session encryption active.');
     } catch (e) {
-      console.error('[session] handleSignedId failed:', e);
+      this.log('ERROR', `[session] handleSignedId failed: ${e}`);
       this.sendBrowserJson({ type: 'error', message: 'Secure handshake failed' });
       this.relay?.close();
     }
@@ -329,7 +337,7 @@ export class Session {
     // In the secure flow, the CLIENT generates the symmetric key in handleSignedId.
     // The server does NOT send a public_key response — the next message is an encrypted Hash.
     // This handler is kept as a no-op in case an unexpected public_key arrives.
-    console.warn('[session] Unexpected PublicKey message received (ignored)');
+    this.log('WARN', '[session] Unexpected PublicKey message received (ignored)');
   }
 
   private handleVideoFrame(frame: any): void {
@@ -397,7 +405,7 @@ export class Session {
     }
     this.relay?.close();
     this.relay = null;
-    console.log('[session] Disconnected');
+    this.log('INFO', '[session] Disconnected');
   }
 
   private sendBrowserJson(obj: Record<string, unknown>): void {

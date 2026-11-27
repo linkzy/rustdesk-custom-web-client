@@ -1,4 +1,5 @@
 import WebSocket from 'ws';
+import { log } from './utils/log';
 import { loadProtos, encodeRendezvousMessage } from './utils/proto';
 import type { ServerConfig } from './session';
 
@@ -9,7 +10,7 @@ export class RelayConnection {
   private messageHandlers: MessageHandler[] = [];
   private pendingMessages: Buffer[] = [];
 
-  constructor(ws: WebSocket) {
+  constructor(ws: WebSocket, private readonly sid?: string) {
     this.ws = ws;
     this.ws.on('message', (data: Buffer) => {
       if (this.messageHandlers.length > 0) {
@@ -33,7 +34,7 @@ export class RelayConnection {
     if (this.ws.readyState === WebSocket.OPEN) {
       this.ws.send(data);
     } else {
-      console.error('[relay] Cannot send: WebSocket not open');
+      log('ERROR', '[relay] Cannot send: WebSocket not open', { session: this.sid });
     }
   }
 
@@ -47,6 +48,7 @@ export async function connectRelay(
   relayServer: string,
   uuid: string,
   serverConfig?: ServerConfig,
+  sid?: string,
 ): Promise<RelayConnection> {
   // Parse optional "host:port" override or fall back to env / relay server from hbbs
   const hbbrOverride = serverConfig?.hbbrHost ?? '';
@@ -61,7 +63,7 @@ export async function connectRelay(
 
   return new Promise((resolve, reject) => {
     const ws = new WebSocket(url);
-    const relayConn = new RelayConnection(ws);
+    const relayConn = new RelayConnection(ws, sid);
 
     const timeout = setTimeout(() => {
       ws.close();
@@ -69,7 +71,7 @@ export async function connectRelay(
     }, 30000);
 
     ws.on('open', () => {
-      console.log(`[relay] Connected to hbbr at ${url}`);
+      log('INFO', `[relay] Connected to hbbr at ${url}`, { session: sid });
 
       // Send RequestRelay with the UUID coordinated through hbbs
       // hbbr will pair us with the peer when it also connects with the same UUID
@@ -85,7 +87,7 @@ export async function connectRelay(
 
       const encoded = encodeRendezvousMessage(root, payload);
       ws.send(encoded);
-      console.log(`[relay] Sent RequestRelay uuid=${uuid} for peer=${targetId}`);
+      log('INFO', `[relay] Sent RequestRelay uuid=${uuid} for peer=${targetId}`, { session: sid });
 
       clearTimeout(timeout);
       resolve(relayConn);
@@ -97,7 +99,7 @@ export async function connectRelay(
     });
 
     ws.on('close', (code, reason) => {
-      console.log(`[relay] hbbr connection closed (code=${code}, reason="${reason.toString()}")`);
+      log('INFO', `[relay] hbbr connection closed (code=${code}, reason="${reason.toString()}")`, { session: sid });
     });
   });
 }

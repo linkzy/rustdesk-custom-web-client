@@ -3,6 +3,7 @@ import WebSocket, { WebSocketServer } from 'ws';
 import path from 'path';
 import * as dotenv from 'dotenv';
 import { Session } from './session';
+import { log } from './utils/log';
 import { buildKeyPayload, MODIFIER_MAP } from './utils/keymap';
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
@@ -24,7 +25,7 @@ async function verifyCaptcha(token: string): Promise<boolean> {
     const json = await res.json() as { success: boolean };
     return json.success === true;
   } catch (e) {
-    console.error('[gateway] hCaptcha verification error:', e);
+    log('ERROR', `[gateway] hCaptcha verification error: ${e}`);
     return false;
   }
 }
@@ -48,15 +49,15 @@ const httpServer = http.createServer((req, res) => {
 
 const wss = new WebSocketServer({ server: httpServer });
 httpServer.listen(GATEWAY_PORT, () => {
-  console.log(`[gateway] Listening on port ${GATEWAY_PORT} (captcha=${CAPTCHA_ENABLED})`);
+  log('INFO', `[gateway] Listening on port ${GATEWAY_PORT} (captcha=${CAPTCHA_ENABLED})`);
 });
 
 wss.on('connection', (ws: WebSocket) => {
-  console.log('[gateway] Browser connected');
+  log('INFO', '[gateway] Browser connected');
   let session: Session | null = null;
 
   const sendLog = (msg: string) => {
-    console.log('[gw->browser]', msg);
+    log('INFO', `[gw->browser] ${msg}`, { session: session?.id });
     if (ws.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify({ type: 'log', message: msg }));
     }
@@ -99,7 +100,7 @@ wss.on('connection', (ws: WebSocket) => {
         try {
           await session.connect();
         } catch (e: any) {
-          console.error('[gateway] Session connect error:', e.message);
+          log('ERROR', `[gateway] Session connect error: ${e.message}`, { session: session?.id });
           sendLog(`connect error: ${e.message}`);
           if (ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({ type: 'error', message: e.message }));
@@ -145,17 +146,17 @@ wss.on('connection', (ws: WebSocket) => {
         ws.send(JSON.stringify({ type: 'disconnected' }));
       }
     } catch (e) {
-      console.error('[gateway] Message error:', e);
+      log('ERROR', `[gateway] Message error: ${e}`, { session: session?.id });
     }
   });
 
   ws.on('close', () => {
-    console.log('[gateway] Browser disconnected');
+    log('INFO', '[gateway] Browser disconnected');
     session?.disconnect();
     session = null;
   });
 
   ws.on('error', (err) => {
-    console.error('[gateway] WebSocket error:', err);
+    log('ERROR', `[gateway] WebSocket error: ${err}`, { session: session?.id });
   });
 });
