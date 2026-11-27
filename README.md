@@ -88,7 +88,7 @@ docker compose -f docker-compose.prod.yml up -d
 ```
 
 Open the port from `WEB_PORT` (80 by default) — or put HTTPS in front of it, which
-WebCodecs requires. Then enter the remote machine's RustDesk ID and password.
+WebCodecs requires. Then enter the remote machine's machine ID and password.
 
 No relay yet? [`docs/DEPLOYMENT.md`](./docs/DEPLOYMENT.md) starts one from scratch and
 covers HTTPS, operating and troubleshooting. For the code itself:

@@ -135,7 +135,7 @@ async function main() {
     await evaluate(() => { localStorage.clear(); return true; });
     await send('Page.reload');
     await sleep(1800);
-    if (!(await evaluate(() => !!document.getElementById('rclient-device-id')))) {
+    if (!(await evaluate(() => !!document.getElementById('rclient-machine-id')))) {
       throw new Error('connect form did not render');
     }
 
@@ -176,7 +176,7 @@ async function main() {
 
     // 2. Fill ID, then type the password visibly, then Connect.
     await evaluate((idv) => {
-      const el = document.getElementById('rclient-device-id');
+      const el = document.getElementById('rclient-machine-id');
       const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
       setter.call(el, idv);
       el.dispatchEvent(new Event('input', { bubbles: true }));

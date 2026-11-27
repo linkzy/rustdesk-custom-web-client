@@ -181,12 +181,12 @@ export function ConnectForm({ onConnect, onDisconnect, status, error, reconnect,
       {!isConnected ? (
         <form className={styles.form} onSubmit={handleSubmit} aria-label={t('connect.formLabel')}>
           <div className={styles.field}>
-            <label className={styles.label} htmlFor="rclient-device-id">{t('connect.deviceId')}</label>
+            <label className={styles.label} htmlFor="rclient-machine-id">{t('connect.machineId')}</label>
             <input
-              id="rclient-device-id"
+              id="rclient-machine-id"
               className={styles.input}
               type="text"
-              placeholder={t('connect.deviceIdPlaceholder')}
+              placeholder={t('connect.machineIdPlaceholder')}
               value={targetId}
               onChange={(e) => { setTargetId(e.target.value); save(LS_ID_KEY, e.target.value); }}
               disabled={isConnecting}

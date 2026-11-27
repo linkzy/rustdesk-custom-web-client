@@ -11,8 +11,8 @@ import type { Catalogue } from './types';
 export const ptBR: Catalogue = {
   'connect.subtitle': 'Cliente web do RustDesk',
   'connect.formLabel': 'Conectar a uma máquina RustDesk',
-  'connect.deviceId': 'ID do dispositivo',
-  'connect.deviceIdPlaceholder': 'Digite o ID do RustDesk',
+  'connect.machineId': 'ID da máquina',
+  'connect.machineIdPlaceholder': 'Digite o ID da máquina',
   'connect.password': 'Senha',
   'connect.passwordPlaceholder': 'Senha de conexão',
   'connect.rememberPassword': 'Lembrar senha',

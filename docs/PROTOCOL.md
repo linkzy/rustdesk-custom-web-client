@@ -170,7 +170,7 @@ Message { hash: Hash { salt: "abc123", challenge: "xyz789" } }
 ```proto
 Message {
   login_request: LoginRequest {
-    username: "TARGET_PEER_ID",  // MUST be the target machine's RustDesk ID (e.g. "54372565")
+    username: "TARGET_PEER_ID",  // MUST be the target ID (the machine's RustDesk ID) (e.g. "54372565")
                                   // Empty string → server returns "Offline" error!
     password: bytes,        // see hashing below
     my_id: "rclient-web",   // any string ID for the gateway
@@ -223,7 +223,7 @@ const final = crypto.createHash('sha256')
 
 ### `username` Field (Critical)
 
-`LoginRequest.username` **must** be set to the **target machine's RustDesk ID** (e.g. `"54372565"`), not empty string. The server checks:
+`LoginRequest.username` **must** be set to the **target ID** (the machine's RustDesk ID) (e.g. `"54372565"`), not empty string. The server checks:
 ```rust
 if !is_ip_str(username) && !is_domain_port_str(username) && username != machine_own_id {
     // Returns "Offline" error — even if correct password!

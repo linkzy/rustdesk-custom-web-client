@@ -12,8 +12,8 @@ export const en = {
   // Connect screen
   'connect.subtitle': 'RustDesk Web Client',
   'connect.formLabel': 'Connect to a RustDesk machine',
-  'connect.deviceId': 'Device ID',
-  'connect.deviceIdPlaceholder': 'Enter RustDesk ID',
+  'connect.machineId': 'Machine ID',
+  'connect.machineIdPlaceholder': 'Enter the machine ID',
   'connect.password': 'Password',
   'connect.passwordPlaceholder': 'Connection password',
   'connect.rememberPassword': 'Remember password',

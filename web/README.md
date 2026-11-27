@@ -29,7 +29,7 @@ All four pass. CI runs the same four (see `../.github/workflows/ci.yml`); the ro
 
 | Path | What it does |
 |---|---|
-| `src/components/ConnectForm.tsx` | Device ID, password, "Remember password", Advanced options, hCaptcha |
+| `src/components/ConnectForm.tsx` | Machine ID, password, "Remember password", Advanced options, hCaptcha |
 | `src/components/RemoteScreen.tsx` | Canvas rendering, mouse/keyboard capture |
 | `src/components/DebugPanel.tsx` | The collapsible log panel (Toggle with "Show debug info") |
 | `src/components/StatsOverlay.tsx` | FPS / frame-time / ping overlay |

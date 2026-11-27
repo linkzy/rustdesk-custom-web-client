@@ -218,7 +218,7 @@ test('my scenario', async ({ page, stack }) => {
 - Assert on things a user gets, not on internals. `stack.control` exposes the
   fake host's own state: `waitForFrames(n)`, `events('mouse')`, `events('key')`,
   `clearEvents()`, `state()`.
-- Select elements by **id** (`#rclient-device-id`) or role, not by translated
+- Select elements by **id** (`#rclient-machine-id`) or role, not by translated
   label text or CSS module class names: the labels change with the locale.
 - Wait on real state rather than sleeping. `expect.poll` and
   `stack.control.waitForFrames` both do this.

@@ -152,7 +152,7 @@ When completing a task, verify it by running the relevant unit test or manually 
    - Client → Peer: `PublicKey { asymmetric_value: ephemeral.publicKey, symmetric_value: sealedKey }`
    - No further `PublicKey` message comes from the peer — next peer message is already encrypted.
 
-7. **LoginRequest.username must be the target ID**: Set `username` to the **target machine's RustDesk ID** (e.g. `"54372565"`), not empty string. The peer server checks `username != own_id` and returns `LoginResponse { error: "Offline" }` if it doesn't match.
+7. **LoginRequest.username must be the target ID**: Set `username` to the **target ID** (the machine's RustDesk ID) (e.g. `"54372565"`), not empty string. The peer server checks `username != own_id` and returns `LoginResponse { error: "Offline" }` if it doesn't match.
 
 8. **relay_response vs punch_hole_response**: When `force_relay: true`, newer hbbs versions reply with `relay_response` (not `punch_hole_response`). Handle both. `relay_response` already has the UUID assigned by the server — do not generate a new one.
 

@@ -29,7 +29,7 @@ Grouped by area; add new terms in the right group rather than at the end.
 
 | Term | Means | Not |
 |---|---|---|
-| **connect form** | The screen with the machine ID, password and Advanced options. | login page, login form, landing page |
+| **connect form** | The screen with the machine ID, password and Advanced options. | login page, login form, landing page, device ID field |
 | **remote screen** | The canvas that renders the remote machine, plus its input handling. | viewer, canvas (alone), screen view |
 | **session toolbar** | The bar shown above the remote screen while connected (fit, fullscreen, theme, disconnect). | toolbar (alone), top bar |
 | **Debug Panel** | The collapsible log panel fed by the gateway and the browser. | console, log viewer |
@@ -41,7 +41,8 @@ Grouped by area; add new terms in the right group rather than at the end.
 | Term | Means | Not |
 |---|---|---|
 | **peer** | The remote machine's RustDesk host application, as seen by the gateway. | host (alone — "host" also means a server), target |
-| **target ID** | The RustDesk ID of the machine being controlled. | device ID, client ID, peer ID |
+| **machine ID** | The ID the user types to connect, as shown in RustDesk on the remote machine. This is the user-facing name (UI labels, prose for users). | device ID, Device ID |
+| **target ID** | The same ID in code, protocol messages, logs and developer docs (e.g. `targetId`). Same thing as *machine ID*, different register. | device ID, client ID, peer ID, machine ID (in code) |
 | **rendezvous** | Asking `hbbs` where a peer is and how to reach it. The gateway always forces relay mode. | discovery, lookup, punch-hole (alone) |
 | **force relay** | The gateway's deliberate choice to always route through `hbbr` rather than attempt a direct connection (`force_relay: true`). | relay mode, no-NAT |
 | **secure handshake** | The step where the client generates the session key and sends it to the peer, sealed with the peer's public key. | key exchange, crypto handshake |

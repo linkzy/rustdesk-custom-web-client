@@ -17,7 +17,7 @@ export { expect };
  */
 export async function connect(page, { id, password }) {
   await page.goto('/');
-  await page.locator('#rclient-device-id').fill(id);
+  await page.locator('#rclient-machine-id').fill(id);
   await page.locator('#rclient-password').fill(password);
   await page.getByRole('button', { name: /^connect$/i }).click();
 }

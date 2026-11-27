@@ -64,7 +64,7 @@ try {
   const page = await context.newPage();
 
   await page.goto(stack.appUrl);
-  await page.locator('#rclient-device-id').fill(stack.fakeHost.id);
+  await page.locator('#rclient-machine-id').fill(stack.fakeHost.id);
   await page.locator('#rclient-password').fill(stack.fakeHost.password);
   await page.getByRole('button', { name: /^connect$/i }).click();
   await page.locator('canvas').waitFor({ state: 'visible', timeout: 30_000 });
