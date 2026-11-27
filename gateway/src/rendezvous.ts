@@ -1,4 +1,5 @@
 import WebSocket from 'ws';
+import { log } from './utils/log';
 import { v4 as uuidv4 } from 'uuid';
 import { loadProtos, encodeRendezvousMessage, decodeRendezvousMessage } from './utils/proto';
 import type { ServerConfig } from './session';
@@ -13,6 +14,7 @@ export async function performRendezvous(
   targetId: string,
   attempt = 1,
   serverConfig?: ServerConfig,
+  sid?: string,
 ): Promise<RendezvousResult> {
   // Parse optional "host:port" override or fall back to env
   const hbbsOverride = serverConfig?.hbbsHost ?? '';
@@ -37,7 +39,7 @@ export async function performRendezvous(
     let resolved = false;
 
     ws.on('open', () => {
-      console.log(`[rendezvous] Connected to hbbs at ${url}`);
+      log('INFO', `[rendezvous] Connected to hbbs at ${url}`, { session: sid });
       const payload = {
         punch_hole_request: {
           id: targetId,
@@ -48,21 +50,21 @@ export async function performRendezvous(
         },
       };
       ws.send(encodeRendezvousMessage(root, payload));
-      console.log(`[rendezvous] Sent PunchHoleRequest for peer: ${targetId}`);
+      log('INFO', `[rendezvous] Sent PunchHoleRequest for peer: ${targetId}`, { session: sid });
     });
 
     ws.on('message', (data: Buffer) => {
       try {
         const decoded = decodeRendezvousMessage(root, new Uint8Array(data)) as any;
         const activeFields = Object.keys(decoded).filter(k => decoded[k] !== null && decoded[k] !== undefined && decoded[k] !== '' && decoded[k] !== 0 && decoded[k] !== false);
-        console.log(`[rendezvous] Received: fields=${JSON.stringify(activeFields)} raw=${Buffer.from(data).toString('hex').slice(0, 60)}`);
+        log('INFO', `[rendezvous] Received: fields=${JSON.stringify(activeFields)} raw=${Buffer.from(data).toString('hex').slice(0, 60)}`, { session: sid });
 
         // Newer hbbs (force_relay=true) may reply directly with relay_response,
         // with uuid and relay_server already set — no need to send RequestRelay back.
         if (decoded.relay_response) {
           const resp = decoded.relay_response;
           if (resp.relay_server && resp.uuid) {
-            console.log(`[rendezvous] relay_response: relay=${resp.relay_server} uuid=${resp.uuid}`);
+            log('INFO', `[rendezvous] relay_response: relay=${resp.relay_server} uuid=${resp.uuid}`, { session: sid });
             let pkBytes: Uint8Array = new Uint8Array(0);
             if (resp.pk) {
               pkBytes = typeof resp.pk === 'string'
@@ -89,7 +91,7 @@ export async function performRendezvous(
           // relay_server present = peer found (ID_NOT_EXIST is just the proto3 default enum value 0)
           if (resp.relay_server) {
             const uuid = uuidv4();
-            console.log(`[rendezvous] Peer found on relay ${resp.relay_server}, uuid=${uuid}`);
+            log('INFO', `[rendezvous] Peer found on relay ${resp.relay_server}, uuid=${uuid}`, { session: sid });
 
             // Extract peer public key (bytes field — protobufjs returns as binary string)
             let pkBytes: Uint8Array;
@@ -115,7 +117,7 @@ export async function performRendezvous(
               },
             };
             ws.send(encodeRendezvousMessage(root, relayPayload));
-            console.log(`[rendezvous] Sent RequestRelay to hbbs, uuid=${uuid}`);
+            log('INFO', `[rendezvous] Sent RequestRelay to hbbs, uuid=${uuid}`, { session: sid });
 
             // Give hbbs a moment to forward to peer, then we're done
             setTimeout(() => {
@@ -138,9 +140,9 @@ export async function performRendezvous(
               // generic error instead of the friendly offline message.
               resolved = true;
               ws.close();
-              console.log(`[rendezvous] Peer OFFLINE (attempt ${attempt}/${MAX_ATTEMPTS}), retrying in 2s...`);
+              log('INFO', `[rendezvous] Peer OFFLINE (attempt ${attempt}/${MAX_ATTEMPTS}), retrying in 2s...`, { session: sid });
               setTimeout(() => {
-                performRendezvous(targetId, attempt + 1, serverConfig).then(resolve).catch(reject);
+                performRendezvous(targetId, attempt + 1, serverConfig, sid).then(resolve).catch(reject);
               }, 2000);
             } else {
               resolved = true;
@@ -154,7 +156,7 @@ export async function performRendezvous(
           }
         }
       } catch (e) {
-        console.error('[rendezvous] Failed to decode message:', e);
+        log('ERROR', `[rendezvous] Failed to decode message: ${e}`, { session: sid });
       }
     });
 
@@ -164,7 +166,7 @@ export async function performRendezvous(
     });
 
     ws.on('close', (code, reason) => {
-      console.log(`[rendezvous] hbbs closed (code=${code}, reason="${reason.toString()}")`);
+      log('INFO', `[rendezvous] hbbs closed (code=${code}, reason="${reason.toString()}")`, { session: sid });
       if (!resolved) {
         clearTimeout(timeout);
         reject(new Error(`[rendezvous] hbbs closed connection unexpectedly (code=${code})`));
